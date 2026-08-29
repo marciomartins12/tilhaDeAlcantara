@@ -1,0 +1,9 @@
+{{#if flash}}
+  <div class="alert {{#if (eq flash.type 'error')}}alert--error{{else}}alert--info{{/if}}">
+    {{#if flash.message}}
+      {{flash.message}}
+    {{else}}
+      {{flash}}
+    {{/if}}
+  </div>
+{{/if}}

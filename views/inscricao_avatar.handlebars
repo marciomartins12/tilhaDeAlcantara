@@ -1,0 +1,21 @@
+<section class="section" id="avatar">
+  <div class="section__content">
+    <div class="card">
+      <h2 class="card__title">Enviar Foto (Avatar)</h2>
+      <p>Inscrição confirmada para {{reg.name}} ({{reg.type}}). Envie sua foto para o card.</p>
+      <form action="/inscricao/avatar/{{reg.id}}" method="POST" enctype="multipart/form-data" class="form">
+        <div class="form__group">
+          <label for="avatar">Foto</label>
+          <input id="avatar" name="avatar" type="file" accept="image/*" required />
+          <div class="file-upload__preview" id="avatar-preview" hidden>
+            <img class="file-upload__thumb" id="avatar-preview-img" alt="Prévia da imagem selecionada" />
+            <div class="file-upload__name" id="avatar-file-name"></div>
+          </div>
+        </div>
+        <div class="form__actions">
+          <button type="submit" class="btn btn--primary">Enviar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+    <!-- Desliga o zoom automático do iOS/Safari quando o usuário foca em inputs
+         (evita aquele "pulinho de zoom" chato ao clicar para digitar) -->
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#000000" />
+    <!-- Preconnect critical origins early -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <title>{{pageTitle}}</title>
+    <link rel="icon" type="image/svg+xml" href="{{asset '/public/img/favicon-bike.svg'}}" />
+    <!-- Preload textura + peixe para mobile pintar mais rápido (LCP / first paint) -->
+    <link rel="preload" as="image" fetchpriority="high" href="{{asset '/public/img/fundoMato.webp'}}" type="image/webp" />
+    <link rel="preload" as="image" fetchpriority="high" href="{{asset '/public/img/peixefundo.webp'}}" type="image/webp" />
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <script>
+      try {
+        if (navigator && navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+          (async () => {
+            try {
+              const regs = await navigator.serviceWorker.getRegistrations();
+              for (const r of regs) { await r.unregister(); }
+            } catch (_) {}
+          })();
+        }
+      } catch (_) {}
+    </script>
+    <!-- Cleanup any legacy AppCache -->
+    <meta name="manifest" content="" />
+
+    <!-- Detecção INLINE de WebP (antes de carregar CSS). Adiciona .webp ou .no-webp
+         no <html> para o :root saber qual textura usar — resolve o problema de textura
+         não aparecer em celulares com navegador Android/Samsung antigo sem WebP. -->
+    <script>
+      (function () {
+        try {
+          var w = new Image();
+          w.onload = function () { document.documentElement.classList.add('webp'); };
+          w.onerror = function () { document.documentElement.classList.add('no-webp'); };
+          w.src = 'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA';
+        } catch (e) { document.documentElement.classList.add('no-webp'); }
+      })();
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&subset=cyrillic&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{asset '/public/css/styles.css'}}" />
+    <link rel="stylesheet" href="https://unpkg.com/cropperjs@1.6.1/dist/cropper.min.css" />
+  </head>
+  <body class="{{activeNav}}-page">
+    {{> header}}
+    <main>
+      {{{body}}}
+    </main>
+    {{> footer}}
+    
+    <div class="modal" id="modal-image-view" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="modal__dialog">
+        <div class="modal__header">
+          <h3 class="modal__title">Imagem</h3>
+          <button class="modal__close" type="button" aria-label="Fechar" data-modal-close>&times;</button>
+        </div>
+        <div class="modal__content">
+          <img class="modal__image" alt="" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
+        </div>
+      </div>
+    </div>
+    
+    <div class="modal" id="modal-avatar-crop" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="modal__dialog">
+        <div class="modal__header">
+          <h3 class="modal__title">Ajustar corte da imagem</h3>
+          <button class="modal__close" type="button" aria-label="Fechar" data-modal-close>&times;</button>
+        </div>
+        <div class="modal__content">
+          <p>Posicione e ajuste o corte para ficar quadrado.</p>
+          <div class="avatar-cropper">
+            <img id="avatar-crop-image" alt="Imagem para corte" src="" />
+          </div>
+          <div class="form__actions" style="margin-top: 10px; display: flex; gap: 10px;">
+            <button type="button" class="btn btn--primary" id="avatar-crop-apply">Aplicar corte</button>
+            <button type="button" class="btn" data-modal-close>Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="{{asset '/public/js/menu.js'}}"></script>
+    <script src="https://unpkg.com/cropperjs@1.6.1/dist/cropper.min.js"></script>
+    <script src="{{asset '/public/js/inscricao.js'}}"></script>
+    <script src="{{asset '/public/js/gallery.js'}}"></script>
+    <div id="toast-root" class="toast-root" aria-live="polite" aria-atomic="true"></div>
+    <div class="modal hidden" id="global-confirm-modal" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="modal__dialog" role="document">
+        <h3 class="modal__title" id="global-confirm-title">Confirmar ação</h3>
+        <p class="modal__text" id="global-confirm-message"></p>
+        <div class="modal__actions">
+          <button type="button" class="btn" id="global-confirm-cancel">Cancelar</button>
+          <button type="button" class="btn btn--primary" id="global-confirm-ok">Confirmar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal hidden" id="global-info-modal" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="modal__dialog" role="document">
+        <div class="modal__header">
+          <h3 class="modal__title" id="global-info-title">Aviso</h3>
+          <button class="modal__close" type="button" aria-label="Fechar" data-modal-close id="global-info-close">&times;</button>
+        </div>
+        <div class="modal__content">
+          <p class="modal__text" id="global-info-message"></p>
+        </div>
+        <div class="modal__actions">
+          <button type="button" class="btn btn--primary" id="global-info-ok">OK</button>
+        </div>
+      </div>
+    </div>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script>
+      (function() {
+        try {
+          if (window.lucide && typeof window.lucide.createIcons === 'function') {
+            window.lucide.createIcons({
+              attrs: {
+                width: 18,
+                height: 18,
+                stroke: 'currentColor',
+                'stroke-width': 2,
+                'stroke-linecap': 'round',
+                'stroke-linejoin': 'round'
+              }
+            });
+          }
+        } catch (e) { }
+      })();
+    </script>
+  </body>
+  
+</html>

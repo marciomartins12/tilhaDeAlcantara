@@ -1,0 +1,77 @@
+<section class="section" id="card">
+  <div class="section__content">
+    <div class="card">
+      <h2 class="card__title">Card de Identificação</h2>
+      {{> flash}}
+      <div class="card__meta" style="margin-bottom: 12px;">
+        {{#if cardInfo.paidOrder}}
+          <p><strong>Número de identificação:</strong> {{#if cardInfo.paidOrderStr}}{{cardInfo.paidOrderStr}}{{else}}{{cardInfo.paidOrder}}{{/if}}</p>
+          {{#if cardInfo.medalEligible}}
+            <p class="alert alert--success">
+              <span class="icon" aria-hidden="true" style="display:inline-flex;vertical-align:middle;margin-right:8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" role="img" focusable="false">
+                  <path fill="currentColor" d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2.5l-3.5 2.1.9-3.9-3-2.6 4-.3 1.6-3.7 1.6 3.7 4 .3-3 2.6.9 3.9L12 19.5z" />
+                </svg>
+              </span>
+              Você receberá medalha. Você está entre os primeiros {{cardInfo.medalCutoff}} pagos.
+            </p>
+          {{else}}
+            <p class="alert alert--info">
+              <span class="icon" aria-hidden="true" style="display:inline-flex;vertical-align:middle;margin-right:8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" role="img" focusable="false">
+                  <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 7h-2V7h2v2zm0 8h-2v-6h2v6z" />
+                </svg>
+              </span>
+              Você não receberá medalha. As medalhas são para os primeiros {{cardInfo.medalCutoff}} inscritos com pagamento confirmado.
+            </p>
+          {{/if}}
+        {{else}}
+          <p class="alert alert--warning">
+            Seu pagamento foi confirmado, mas o número de identificação ainda não foi atribuído. Atualize a página em alguns instantes.
+          </p>
+        {{/if}}
+      </div>
+      <div id="card-composer"
+           data-id="{{reg.id}}"
+           data-name="{{reg.name}}"
+           data-type="{{reg.type}}"
+           data-group="{{reg.group}}"
+           data-city="{{reg.city}}"
+           data-avatar-path="{{reg.avatarPath}}"
+           data-circle-cx="0.5"
+           data-circle-cy="0.474"
+           data-circle-r="0.42"
+           data-overscan="1.0"></div>
+      <canvas id="card-canvas" width="0" height="0" aria-label="Prévia do seu card personalizado"></canvas>
+      <div class="form__actions">
+        <button class="btn btn--primary" id="download-card">Baixar Card Personalizado</button>
+      </div>
+    </div>
+  </div>
+  <div class="section__content" style="margin-top: 28px;">
+    <div class="card">
+      <h3 class="card__title">Deseja trocar sua foto?</h3>
+      <p style="margin-bottom: 12px;">Atualize sua imagem para o card. O corte será quadrado como na inscrição.</p>
+      <form action="/inscricao/avatar/{{reg.id}}" method="POST" enctype="multipart/form-data" class="form">
+        <div class="form__group">
+          <div class="file-upload" id="file-upload">
+            <div class="file-upload__drop">
+              <span class="file-upload__hint">Clique no botão para escolher uma imagem</span>
+              <span class="file-upload__sub">JPG, PNG ou WEBP</span>
+            </div>
+            <input id="avatar" name="avatar" type="file" accept="image/*" aria-describedby="avatar-file-name" />
+            <div class="file-upload__preview" id="avatar-preview" hidden>
+              <img class="file-upload__thumb" id="avatar-preview-img" alt="Prévia da imagem selecionada" />
+              <div class="file-upload__name" id="avatar-file-name"></div>
+            </div>
+          </div>
+        </div>
+        <div class="form__actions" style="display:flex; gap:10px;">
+          <button type="submit" class="btn btn--primary">Atualizar imagem</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <script src="/public/js/inscricao_card.js"></script>
+</section>

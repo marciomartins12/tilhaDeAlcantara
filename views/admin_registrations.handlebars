@@ -1,0 +1,136 @@
+<section class="section details">
+  <div class="section__header section__header--with-action">
+    <h2 class="section__title section__title--center">Inscrições</h2>
+    <a href="/admin/inscricoes/exportar-docx" class="btn btn--compact btn--link section__action" title="Exportar lista de pagos para Word">Exportar lista para Word</a>
+    <span class="section__divider" aria-hidden="true"></span>
+  </div>
+
+  <div class="admin-filters filter-bar" style="width:98%; margin:0 auto;">
+    <form method="GET" action="/admin/inscricoes" class="form" id="filters-form">
+      <div class="form__row filter-bar__row">
+        <input type="text" name="name" value="{{filters.name}}" placeholder="Nome" class="input filter-bar__input" />
+        <input type="text" name="cpf" value="{{filters.cpf}}" placeholder="CPF" class="input filter-bar__input" />
+        <input type="text" name="city" value="{{filters.city}}" placeholder="Cidade" class="input filter-bar__input" />
+        <input type="text" name="group" value="{{filters.group}}" placeholder="Grupo" class="input filter-bar__input" />
+        <div class="filter-bar__segmented" aria-label="Status de pagamento">
+          <input type="radio" id="status-pending" name="status" value="pending" {{#if filters.statusIsPending}}checked{{/if}} />
+          <label for="status-pending" class="segmented__item segmented__item--pending" title="Pendente">
+            <i data-lucide="clock"></i>
+            <span>Pendente</span>
+          </label>
+          <input type="radio" id="status-paid" name="status" value="paid" {{#if filters.statusIsPaid}}checked{{/if}} />
+          <label for="status-paid" class="segmented__item segmented__item--paid" title="Pago">
+            <i data-lucide="check-circle"></i>
+            <span>Pago</span>
+          </label>
+        </div>
+        <button type="submit" class="btn btn--filter" aria-label="Filtrar" title="Filtrar">Filtrar</button>
+        <a href="/admin/inscricoes" class="btn btn--clear" aria-label="Limpar" title="Limpar">Limpar</a>
+      </div>
+    </form>
+  </div>
+
+  <div class="admin-table" style="width:98%; margin:20px auto;">
+    <table class="table table--admin" style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th class="cell--id">ID</th>
+          <th class="cell--plate">Número da Placa</th>
+          <th class="cell--name">Nome</th>
+          <th class="cell--cpf">CPF</th>
+          <th class="cell--type">Tipo</th>
+          <th class="cell--city">Cidade</th>
+          <th class="cell--group">Grupo</th>
+          <th class="cell--phone">Telefone</th>
+          <th class="cell--amount">Valor</th>
+          <th class="cell--date">Criado em</th>
+          <th class="cell--status">Status</th>
+          <th class="cell--actions">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#if regs.length}}
+          {{#each regs}}
+            <tr>
+              <td class="cell--id">{{this.id}}</td>
+              <td class="cell--plate">{{#if this.paidOrderStr}}{{this.paidOrderStr}}{{else}}{{this.paidOrder}}{{/if}}</td>
+              <td class="cell--name">
+                <div style="font-weight:600;">{{this.displayName}}</div>
+                {{#if this.displayNameSmall}}
+                  <div style="font-size:0.75rem; opacity:.75; color:#d1c89c;">(no cartão: {{this.displayNameSmall}})</div>
+                {{/if}}
+                {{#if this.realName}}
+                  {{#unless this.displayNameSmall}}
+                    <div style="font-size:0.75rem; opacity:.75; color:#d1c89c;">(no cartão: {{this.name}})</div>
+                  {{/unless}}
+                {{/if}}
+              </td>
+              <td class="cell--cpf">{{this.cpf}}</td>
+              <td class="cell--type"><span class="type-badge" data-type="{{this.type}}">{{#if (eq this.type 'ATLETA')}}CICLISTA{{else}}ACOMPANHANTE{{/if}}</span></td>
+              <td class="cell--city">{{this.city}}</td>
+              <td class="cell--group">{{this.group}}</td>
+              <td class="cell--phone">{{this.phone}}</td>
+              <td class="cell--amount">{{this.amount}}</td>
+              <td class="cell--date">{{this.createdAt}}</td>
+              <td class="cell--status">
+                <span class="status-badge" data-status="{{#if this.isPaid}}paid{{else}}pending{{/if}}">{{#if this.isPaid}}Pago{{else}}Pendente{{/if}}</span>
+                {{#if this.isPaid}}
+                  {{#if this.paymentConfirmedBy}}
+                    <div class="status-meta" title="Confirmado em {{this.paymentConfirmedAt}}">por {{this.paymentConfirmedBy}}</div>
+                  {{/if}}
+                {{/if}}
+              </td>
+              <td>
+                <div class="table-actions" style="display:flex; align-items:center; gap:8px;">
+                  <a href="/admin/inscricoes/{{this.id}}/editar" class="btn icon-btn--edit" aria-label="Editar" title="Editar">Editar</a>
+                  {{#if this.isPaid}}
+                    <button class="btn icon-btn--confirm" disabled aria-label="Pago" title="Pago">Pago</button>
+                  {{else}}
+                    <form method="POST" action="/admin/inscricoes/{{this.id}}/confirmar" style="display:inline;" data-confirm="Confirmar pagamento desta inscrição?">
+                      <button type="submit" class="btn icon-btn--confirm" aria-label="Confirmar" title="Confirmar">Confirmar</button>
+                    </form>
+                  {{/if}}
+                  <form method="POST" action="/admin/inscricoes/{{this.id}}/cancelar" style="display:inline;" data-confirm="Cancelar e remover esta inscrição?">
+                    <button type="submit" class="btn icon-btn--cancel" aria-label="Cancelar" title="Cancelar">Cancelar</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {{/each}}
+        {{else}}
+          <tr><td colspan="12">Nenhuma inscrição encontrada com os filtros aplicados.</td></tr>
+        {{/if}}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="admin-card" style="width:98%; margin:20px auto;">
+    <div class="admin-card__title">
+      <span class="admin-card__icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+        </svg>
+      </span>
+      <span>Correção de Numeração (Gaps)</span>
+    </div>
+    <p class="admin-card__desc">
+      Ferramenta para reorganizar a sequência de placas caso haja saltos indesejados (gaps).<br>
+      Isso ajustará todas as placas subsequentes subtraindo 1 do número atual.
+    </p>
+    
+    <form method="POST" action="/admin/placas/corrigir-gap" class="form" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+      <div style="flex:1; min-width:200px;">
+        <label for="from" style="display:block; margin-bottom:6px; font-size:0.9rem; color:rgba(255,255,255,0.9);">Placa anterior ao erro (última correta)</label>
+        <input type="number" name="from" id="from" placeholder="Ex: 119" required class="filter-bar__input" style="width:100%;" />
+      </div>
+      <div style="flex:0 0 auto;">
+        <button type="submit" class="btn btn--secondary" onclick="return confirm('ATENÇÃO: Isso irá alterar a numeração de todas as placas maiores que o número informado.\n\nTem certeza que deseja continuar?')" style="height: 35px; display:flex; align-items:center;">
+          Corrigir Gap
+        </button>
+      </div>
+    </form>
+    <div style="margin-top:12px; padding:10px; background:rgba(255,255,255,0.05); border-radius:8px; font-size:0.85rem; color:rgba(255,255,255,0.7);">
+      <strong>Exemplo:</strong> Se a sequência pulou de <strong>119</strong> para <strong>121</strong> (faltando o 120), informe <strong>119</strong> no campo acima. O sistema irá transformar a placa 121 em 120, a 122 em 121, e assim por diante.
+    </div>
+  </div>
+</section>

@@ -1,0 +1,264 @@
+<section class="section" id="inscricao">
+  <div class="section__content">
+    <div class="card">
+      <h2 class="card__title">Inscrição</h2>
+      {{> flash}}
+      <div class="alert info-callout" role="note" aria-live="polite">
+        <strong class="info-callout__title">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" class="icon">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12" y2="8" />
+          </svg>
+          Informações do Evento e Inscrição
+        </strong>
+        <span class="info-callout__desc">Veja detalhes do evento e como funciona a inscrição.</span>
+        <br>
+        <div class="div--center">
+
+
+          <button type="button" class="btn  btn_info" data-modal-target="#modal-info" aria-controls="modal-info"
+            aria-expanded="false">
+            Ver informações detalhadas
+          </button>
+        </div>
+      </div>
+      <form action="/inscricao" method="POST" enctype="multipart/form-data" class="form">
+        <div class="form__group">
+          <fieldset class="radio-group">
+            <legend>Tipo da inscrição</legend>
+            <div class="radio-list">
+              <label class="radio-item">
+                <input type="radio" name="type" value="ATLETA" required>
+                <span class="radio-text">
+                  <strong>Ciclista</strong>
+                  <span class="choice__price">R$ {{prices.ATLETA}}</span>
+                  <span class="selected-badge">Selecionado</span>
+                </span>
+              </label>
+              <label class="radio-item">
+                <input type="radio" name="type" value="ACOMPANHANTE" required>
+                <span class="radio-text">
+                  <strong>Acompanhante</strong>
+                  <span class="choice__price">R$ {{prices.ACOMPANHANTE}}</span>
+                  <span class="selected-badge">Selecionado</span>
+                </span>
+              </label>
+            </div>
+          </fieldset>
+        </div>
+
+        <div class="form__group">
+          <label for="realName">Nome do Ciclista (nome completo)</label>
+          <input id="realName" name="realName" type="text" placeholder="Nome completo do ciclista (apenas registro)" autocomplete="name" />
+        </div>
+        <div class="form__group">
+          <label for="name">Nome para o avatar</label>
+          <input id="name" name="name" type="text" required placeholder="Nome ou apelido que vai aparecer no card/avatar" maxlength="22" autocomplete="nickname" />
+          <small class="form__hint" style="color:#ffe7ad; opacity:.88;">Este é o nome que aparecerá impresso no seu cartão de identificação.</small>
+        </div>
+        <div class="form__group">
+          <label for="cpf">CPF</label>
+          <input id="cpf" name="cpf" type="text" required placeholder="00000000000" inputmode="numeric"
+            autocomplete="off" />
+        </div>
+        <div class="form__group">
+          <div class="birthdate-row">
+            <div class="birthdate-row__input">
+              <label for="birthDate">Data de Nascimento</label>
+              <input id="birthDate" name="birthDate" type="text" inputmode="numeric" placeholder="DD/MM/AAAA"
+                maxlength="10" autocomplete="bday" aria-describedby="birthDate-age birthDate-error" />
+            </div>
+            <div class="birthdate-row__age">
+              <span class="birthdate-age" id="birthDate-age" aria-live="polite">Idade: —</span>
+            </div>
+          </div>
+          <p id="birthDate-error" class="alert alert--error hidden" aria-live="polite"></p>
+        </div>
+        <div class="form__group">
+          <label for="group">Grupo</label>
+          <input id="group" name="group" type="text" placeholder="Seu grupo (opcional)" />
+        </div>
+        <div class="form__group">
+          <label for="city">Cidade</label>
+          <input id="city" name="city" type="text" placeholder="Cidade/UF" />
+        </div>
+        <div class="form__group">
+          <label for="phone">Telefone</label>
+          <input id="phone" name="phone" type="text" placeholder="DDD + número" inputmode="numeric"
+            autocomplete="off" />
+        </div>
+        <div class="form__group">
+          <label for="avatar">Foto</label>
+          <div class="file-upload" id="file-upload">
+            <div class="file-upload__drop">
+              <span class="file-upload__hint">Clique para escolher uma imagem</span>
+              <span class="file-upload__sub">JPG ou PNG, tamanho moderado</span>
+            </div>
+            <input id="avatar" name="avatar" type="file" accept="image/*" required
+              aria-describedby="avatar-file-name" />
+            <div class="file-upload__preview" id="avatar-preview" hidden>
+              <img class="file-upload__thumb" id="avatar-preview-img" alt="Prévia da imagem selecionada" />
+              <div class="file-upload__name" id="avatar-file-name"></div>
+            </div>
+          </div>
+        </div>
+        <div class="form__group">
+          <label class="checkbox" for="terms">
+            <input type="checkbox" id="terms" name="terms" value="1" required />
+            <span>Li e aceito o termo de responsabilidade</span>
+          </label>
+          <button type="button" class="btn btn--termo" data-modal-target="#modal-resp" aria-controls="modal-resp" aria-expanded="false">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6z"/></svg>
+            <span>Ler termo de responsabilidade</span>
+          </button>
+        </div>
+        <div class="form__group">
+          <label class="checkbox" for="healthConsent">
+            <input type="checkbox" id="healthConsent" name="healthConsent" value="1" required />
+            <span>Concordo com o Termo de Consentimento de Saúde</span>
+          </label>
+          <button type="button" class="btn btn--termo" data-modal-target="#modal-health" aria-controls="modal-health" aria-expanded="false">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>
+            <span>Ler termo de saúde</span>
+          </button>
+
+
+        </div>
+        <div class="form__actions">
+          <button type="submit" class="btn btn--primary">Enviar e ir para pagamento</button>
+        </div>
+      </form>
+      <div class="modal modal--terms" id="modal-info" role="dialog" aria-modal="true" aria-hidden="true">
+        <div class="modal__dialog">
+          <div class="modal__header">
+            <h3 class="modal__title">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon" width="20" height="20" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span>Informações do Evento e Inscrição</span>
+            </h3>
+            <button class="modal__close" type="button" aria-label="Fechar" data-modal-close>&times;</button>
+          </div>
+          <div class="modal__content">
+            <ul class="modal-list">
+              <li class="modal-list__item">
+                <span class="modal-list__icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                </span>
+                <span class="modal-list__text"><strong>Data:</strong> 22 de novembro de 2026</span>
+              </li>
+              <li class="modal-list__item">
+                <span class="modal-list__icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                </span>
+                <span class="modal-list__text"><strong>Local:</strong> Alcântara – MA</span>
+              </li>
+              <li class="modal-list__item">
+                <span class="modal-list__icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>
+                </span>
+                <span class="modal-list__text"><strong>Inscrição:</strong> Preencha seus dados, aceite os termos e envie a foto.</span>
+              </li>
+              <li class="modal-list__item">
+                <span class="modal-list__icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="12" r="3"/><circle cx="17" cy="12" r="3"/><path d="M10 12h4"/></svg>
+                </span>
+                <span class="modal-list__text"><strong>Tipos:</strong> Ciclista e Acompanhante</span>
+              </li>
+              <li class="modal-list__item">
+                <span class="modal-list__icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2" ry="2"/><path d="M7 10h10"/></svg>
+                </span>
+                <span class="modal-list__text"><strong>Pagamento:</strong> Realizado na próxima etapa após enviar a inscrição.</span>
+              </li>
+            </ul>
+            <p class="modal-note">
+              <span class="modal-note__icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="16" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12" y2="8" />
+                </svg>
+              </span>
+              <span>Em caso de desistência após pagamento, comunique a organização: <a href="mailto:contato@trilhadoburiti.com">contato@trilhadoburiti.com</a>.</span>
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="modal modal--terms" id="modal-health" role="dialog" aria-modal="true" aria-hidden="true">
+        <div class="modal__dialog">
+          <div class="modal__header">
+            <h3 class="modal__title">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon" width="20" height="20" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>
+              <span>Termo de Consentimento de Saúde</span>
+            </h3>
+            <button class="modal__close" type="button" aria-label="Fechar" data-modal-close>&times;</button>
+          </div>
+          <div class="modal__content">
+            <ul class="modal-list">
+              <li class="modal-list__item">
+                <span class="modal-list__icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
+                </span>
+                <span class="modal-list__text">Estou apto(a) para participar e ciente dos riscos da prática esportiva.</span>
+              </li>
+              <li class="modal-list__item">
+                <span class="modal-list__icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>
+                </span>
+                <span class="modal-list__text">Informarei condições médicas relevantes e seguirei orientações da organização.</span>
+              </li>
+              <li class="modal-list__item">
+                <span class="modal-list__icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 7v10M7 12h10"/></svg>
+                </span>
+                <span class="modal-list__text">Autorizo primeiros socorros quando necessário.</span>
+              </li>
+              <li class="modal-list__item">
+                <span class="modal-list__icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6z"/></svg>
+                </span>
+                <span class="modal-list__text">A organização não se responsabiliza por danos de condições pré-existentes ou uso inadequado de equipamentos.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="modal modal--terms" id="modal-resp" role="dialog" aria-modal="true" aria-hidden="true">
+        <div class="modal__dialog">
+          <div class="modal__header">
+            <h3 class="modal__title">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="icon" width="20" height="20" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6z"/></svg>
+              <span>Termo de Responsabilidade</span>
+            </h3>
+            <button class="modal__close" type="button" aria-label="Fechar" data-modal-close>&times;</button>
+          </div>
+          <div class="modal__content">
+            <div class="terms-body">
+              <h4 class="terms-body__title">TERMO DE RESPONSABILIDADE</h4>
+
+              <div class="terms-article">
+                <h5 class="terms-article__title">Artigo 1</h5>
+                <p class="terms-article__text">Declaro estar em plenas condições de saúde e apto(a) a participar deste evento esportivo, isentando a Comissão Organizadora, patrocinadores, apoiadores e demais envolvidos de qualquer responsabilidade decorrente de minha participação. Declaro ainda que possuo os equipamentos de segurança obrigatórios, tais como capacete, luvas e óculos de proteção, sendo que a ausência de qualquer um desses equipamentos impedirá minha participação no evento. Estou ciente de que o percurso será realizado em estradas e áreas rurais, onde poderá haver circulação de veículos motorizados, animais, pedestres e outros usuários da via. Reconheço também que o trajeto poderá apresentar dificuldades, como buracos, desníveis, obstáculos naturais e demais condições inerentes ao percurso, assumindo total responsabilidade pelos riscos decorrentes da minha participação e do meu condicionamento físico. Autorizo, de forma gratuita e por prazo indeterminado, a utilização de fotografias, vídeos, imagens e demais registros da minha participação pelos organizadores, patrocinadores e apoiadores do evento, para fins de divulgação institucional e promocional, em qualquer meio de comunicação, sem que isso gere qualquer direito à indenização ou remuneração.</p>
+              </div>
+
+              <div class="terms-article">
+                <h5 class="terms-article__title">Artigo 2</h5>
+                <p class="terms-article__text">A inscrição para a Trilha do Buriti é pessoal e intransferível, não sendo permitida sua utilização por outra pessoa, salvo mediante comunicação prévia, formal e por escrito, à Comissão Organizadora. O participante que ceder sua inscrição sem a devida autorização será integralmente responsável por quaisquer acidentes, danos ou prejuízos que venham a ocorrer, isentando a Comissão Organizadora, patrocinadores, apoiadores, colaboradores e órgãos públicos envolvidos de qualquer responsabilidade.</p>
+              </div>
+
+              <div class="terms-article">
+                <h5 class="terms-article__title">Artigo 3</h5>
+                <p class="terms-article__text">O valor da inscrição não será reembolsado em caso de desistência, ausência no evento ou qualquer outro motivo de ordem pessoal do participante.</p>
+              </div>
+
+              <div class="terms-article">
+                <h5 class="terms-article__title">Artigo 4</h5>
+                <p class="terms-article__text">Crianças menores de 12 (doze) anos deverão participar obrigatoriamente acompanhadas pelos pais e/ou responsável legal. Os participantes menores de 18 (dezoito) anos somente poderão participar mediante autorização e assinatura deste termo pelos pais ou responsável legal.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

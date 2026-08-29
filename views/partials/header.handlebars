@@ -1,0 +1,203 @@
+<header class="navbar">
+  <div class="navbar__left">
+    <a href="/" class="logo" aria-label="Ir para início">
+      <img src="/public/img/logo.png" alt="logo" class="logo__icon">
+
+      
+    </a>
+  </div>
+  <nav class="navbar__nav" aria-label="Navegação principal">
+    <ul class="nav__list">
+      <li><a href="/#inicio" class="nav__link {{#if (eq activeNav 'home')}}is-active{{/if}}">Início</a></li>
+      <li><a href="/galeria" class="nav__link {{#if (eq activeNav 'galeria')}}is-active{{/if}}">Galeria</a></li>
+
+      <li><a href="/inscricao" class="nav__link {{#if (eq activeNav 'inscricao')}}is-active{{/if}}">Inscrição</a></li>
+      <li><a href="/#baixar-card" class="nav__link">Baixar Avatar</a></li>
+      <li><a href="/#pagamento-pendente" class="nav__link">Fazer Pagamento</a></li>
+      <li>
+        <a href="{{whatsappGroupUrl}}" target="_blank" rel="noopener"
+          class="nav__link nav__link--whatsapp" aria-label="Entrar no grupo do WhatsApp">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"
+            aria-hidden="true">
+            <path
+              d="M17.472 14.382c-.297-.149-1.758-.867-2.031-.964-.273-.099-.472-.148-.671.149-.198.297-.769.964-.943 1.162-.173.199-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.474-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.173.198-.298.297-.496.099-.199.05-.372-.025-.521-.074-.149-.671-1.618-.92-2.219-.242-.582-.487-.503-.671-.511-.173-.008-.372-.01-.571-.01-.198 0-.521.074-.794.372-.273.297-1.04 1.016-1.04 2.479 0 1.463 1.065 2.879 1.213 3.078.149.198 2.099 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.718 2.006-1.412.248-.694.248-1.289.173-1.412-.074-.123-.272-.198-.57-.347z" />
+            <path
+              d="M12.004 2.003c-5.514 0-10 4.486-10 10 0 1.768.469 3.424 1.284 4.858L2 22l5.253-1.378c1.387.751 2.966 1.18 4.751 1.18 5.514 0 10-4.486 10-10s-4.486-10-10-10zm0 18.197c-1.579 0-3.052-.43-4.318-1.175l-.309-.184-3.115.817.832-3.039-.201-.312c-.774-1.235-1.223-2.691-1.223-4.204 0-4.422 3.596-8.018 8.018-8.018 4.422 0 8.018 3.596 8.018 8.018 0 4.422-3.596 8.018-8.018 8.018z" />
+          </svg>
+          <span>Grupo WhatsApp</span>
+        </a>
+      </li>
+      {{#if admin}}
+      {{#if (eq admin.role 'DESIGN')}}
+      {{#unless (eq currentPath '/design/dashboard')}}
+      <li><a href="/design/dashboard" class="nav__link nav__link--dashboard">Ir para Dashboard</a></li>
+      {{/unless}}
+      {{else}}
+      {{#unless (eq currentPath '/admin/dashboard')}}
+      <li><a href="/admin/dashboard" class="nav__link nav__link--dashboard">Ir para Dashboard</a></li>
+      {{/unless}}
+      {{/if}}
+      {{/if}}
+      <li>
+        {{#if admin}}
+        <form method="POST" action="/admin/logout">
+          <button type="submit" class="nav__link nav__link--logout">Sair</button>
+        </form>
+        {{else}}
+        <a href="/admin" class="nav__link {{#if (eq activeNav 'admin')}}is-active{{/if}}">Entrar como Administrador</a>
+        {{/if}}
+      </li>
+    </ul>
+  </nav>
+  <button class="menu" aria-label="Abrir menu">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" class="menu-icon"
+      aria-hidden="true">
+      <g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 7h16" />
+        <path d="M4 12h16" />
+        <path d="M4 17h16" />
+      </g>
+    </svg>
+  </button>
+  <nav class="mobile-menu" id="mobile-menu" aria-hidden="true">
+    <div class="mobile-menu__content">
+      <ul class="mobile-menu__list">
+        <li>
+          <a href="/#inicio" class="mobile-menu__link {{#if (eq activeNav 'home')}}is-active{{/if}}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"
+              aria-hidden="true">
+              <path d="M3 10.5 12 3l9 7.5" />
+              <path d="M5 10v10h14V10" />
+            </svg>
+            <span>Início</span>
+          </a>
+        </li>
+        <li>
+          <a href="{{whatsappGroupUrl}}" target="_blank" rel="noopener"
+            class="mobile-menu__link" aria-label="Entrar no grupo do WhatsApp">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"
+              class="icon" aria-hidden="true">
+              <path
+                d="M17.472 14.382c-.297-.149-1.758-.867-2.031-.964-.273-.099-.472-.148-.671.149-.198.297-.769.964-.943 1.162-.173.199-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.474-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.173.198-.298.297-.496.099-.199.05-.372-.025-.521-.074-.149-.671-1.618-.92-2.219-.242-.582-.487-.503-.671-.511-.173-.008-.372-.01-.571-.01-.198 0-.521.074-.794.372-.273.297-1.04 1.016-1.04 2.479 0 1.463 1.065 2.879 1.213 3.078.149.198 2.099 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.718 2.006-1.412.248-.694.248-1.289.173-1.412-.074-.123-.272-.198-.57-.347z" />
+              <path
+                d="M12.004 2.003c-5.514 0-10 4.486-10 10 0 1.768.469 3.424 1.284 4.858L2 22l5.253-1.378c1.387.751 2.966 1.18 4.751 1.18 5.514 0 10-4.486 10-10s-4.486-10-10-10zm0 18.197c-1.579 0-3.052-.43-4.318-1.175l-.309-.184-3.115.817.832-3.039-.201-.312c-.774-1.235-1.223-2.691-1.223-4.204 0-4.422 3.596-8.018 8.018-8.018 4.422 0 8.018 3.596 8.018 8.018 0 4.422-3.596 8.018-8.018 8.018z" />
+            </svg>
+            <span>Grupo WhatsApp</span>
+          </a>
+        </li>
+        <li>
+          <a href="/galeria" class="mobile-menu__link {{#if (eq activeNav 'galeria')}}is-active{{/if}}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"
+              aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <circle cx="8.5" cy="8.5" r="2" />
+              <path d="M21 15l-4-4-7 7" />
+            </svg>
+            <span>Galeria</span>
+          </a>
+        </li>
+
+        <li>
+          <a href="/inscricao" class="mobile-menu__link {{#if (eq activeNav 'inscricao')}}is-active{{/if}}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"
+              aria-hidden="true">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M19 8v6M22 11h-6" />
+            </svg>
+            <span>Inscrição</span>
+          </a>
+        </li>
+        <li>
+          <a href="/#baixar-card" class="mobile-menu__link">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"
+              aria-hidden="true">
+              <rect x="3" y="4" width="18" height="14" rx="2" ry="2" />
+              <circle cx="8" cy="11" r="2" />
+              <path d="M12 9h6" />
+              <path d="M12 13h6" />
+            </svg>
+            <span>Baixar Avatar</span>
+          </a>
+        </li>
+        <li>
+          <a href="/#pagamento-pendente" class="mobile-menu__link">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"
+              aria-hidden="true">
+              <rect x="2" y="5" width="20" height="14" rx="3" ry="3" />
+              <path d="M2 10h20" />
+              <path d="M7 15h3" />
+            </svg>
+            <span>Fazer Pagamento</span>
+          </a>
+        </li>
+        {{#if admin}}
+        {{#if (eq admin.role 'DESIGN')}}
+        {{#unless (eq currentPath '/design/dashboard')}}
+        <li>
+          <a href="/design/dashboard" class="mobile-menu__link">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"
+              aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+            </svg>
+            <span>Ir para Dashboard</span>
+          </a>
+        </li>
+        {{/unless}}
+        {{else}}
+        {{#unless (eq currentPath '/admin/dashboard')}}
+        <li>
+          <a href="/admin/dashboard" class="mobile-menu__link">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"
+              aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+            </svg>
+            <span>Ir para Dashboard</span>
+          </a>
+        </li>
+        {{/unless}}
+        {{/if}}
+        {{/if}}
+        <li>
+          {{#if admin}}
+          <form method="POST" action="/admin/logout">
+            <button type="submit" class="mobile-menu__link mobile-menu__link--logout">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"
+                aria-hidden="true">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <path d="M16 17l5-5-5-5" />
+                <path d="M21 12H9" />
+              </svg>
+              <span>Sair</span>
+            </button>
+          </form>
+          {{else}}
+          <a href="/admin" class="mobile-menu__link {{#if (eq activeNav 'admin')}}is-active{{/if}}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"
+              aria-hidden="true">
+              <path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6z" />
+              <path d="M9 12l2 2 4-4" />
+            </svg>
+            <span>Entrar como Administrador</span>
+          </a>
+          {{/if}}
+        </li>
+      </ul>
+    </div>
+  </nav>
+</header>

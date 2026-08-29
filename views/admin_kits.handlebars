@@ -1,0 +1,253 @@
+<section class="section details">
+  <div class="section__header section__header--with-action">
+    <h2 class="section__title section__title--center">Recebimento de Kits Ciclista</h2>
+    <a href="/admin/dashboard" class="btn btn--compact btn--link section__action" title="Voltar para o painel">Voltar ao Painel</a>
+    <span class="section__divider" aria-hidden="true"></span>
+  </div>
+
+  <!-- CARD DE ESTATÍSTICAS RÁPIDAS -->
+  <div class="admin-cards" style="max-width:1100px; margin: 10px auto 0 auto; display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px;">
+    <div class="admin-card" style="padding:16px;">
+      <div class="admin-card__title" style="margin-bottom:8px;">
+        <span class="admin-card__icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        </span>
+        <span>Total de Atletas Pagos</span>
+      </div>
+      <div style="font-size:2rem; font-weight:800; color:#ffd96a;">{{counters.total}}</div>
+    </div>
+    <div class="admin-card" style="padding:16px;">
+      <div class="admin-card__title" style="margin-bottom:8px;">
+        <span class="admin-card__icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </span>
+        <span>Já Receberam</span>
+      </div>
+      <div style="font-size:2rem; font-weight:800; color:#69e07d;">{{counters.receivedCount}} <span style="font-size:1rem; opacity:.7; font-weight:600;">({{counters.percent}}%)</span></div>
+    </div>
+    <div class="admin-card" style="padding:16px;">
+      <div class="admin-card__title" style="margin-bottom:8px;">
+        <span class="admin-card__icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/></svg>
+        </span>
+        <span>Ainda Não Receberam</span>
+      </div>
+      <div style="font-size:2rem; font-weight:800; color:#ff8d8d;">{{counters.pendingCount}}</div>
+    </div>
+  </div>
+
+  <div class="admin-filters filter-bar" style="width:98%; margin:24px auto 0 auto;">
+    <form method="GET" action="/admin/kits" class="form" id="kits-filters-form">
+      <div class="form__row filter-bar__row">
+        <input type="text" name="name" value="{{filters.name}}" placeholder="Nome do atleta" class="input filter-bar__input" />
+        <input type="text" name="cpf" value="{{filters.cpf}}" placeholder="CPF (só números)" class="input filter-bar__input" />
+        <input type="text" name="plate" value="{{filters.plate}}" placeholder="Placa (ex: 025)" inputmode="numeric" class="input filter-bar__input" />
+        <div class="filter-bar__segmented" aria-label="Recebimento do kit">
+          <input type="radio" id="kit-all" name="kit" value="" {{#if filters.kitIsAll}}checked{{/if}} />
+          <label for="kit-all" class="segmented__item" title="Todos"><span>Todos</span></label>
+          <input type="radio" id="kit-pending" name="kit" value="pending" {{#if filters.kitIsPending}}checked{{/if}} />
+          <label for="kit-pending" class="segmented__item segmented__item--pending" title="Não recebidos">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/></svg>
+            <span>Não Recebidos</span>
+          </label>
+          <input type="radio" id="kit-received" name="kit" value="received" {{#if filters.kitIsReceived}}checked{{/if}} />
+          <label for="kit-received" class="segmented__item segmented__item--paid" title="Já recebidos">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            <span>Recebidos</span>
+          </label>
+        </div>
+        <button type="submit" class="btn btn--filter" aria-label="Filtrar" title="Filtrar">Filtrar</button>
+        <a href="/admin/kits" class="btn btn--clear" aria-label="Limpar filtros" title="Limpar">Limpar</a>
+      </div>
+    </form>
+  </div>
+
+  {{> flash}}
+
+  <div class="admin-table" style="width:98%; margin:20px auto;">
+    <table class="table table--admin" style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th class="cell--plate" style="width:110px;">Placa</th>
+          <th class="cell--name">Nome do Ciclista</th>
+          <th class="cell--city">Cidade / Grupo</th>
+          <th class="cell--status" style="width:210px;">Status do Kit</th>
+          <th class="cell--actions" style="width:330px;">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#if regs.length}}
+          {{#each regs}}
+            <tr class="{{#if this.kitReceived}}kit-row--received{{else}}kit-row--pending{{/if}}">
+              <td class="cell--plate" style="text-align:center; font-weight:800; font-size:1.2rem;">
+                {{this.paidOrderStr}}
+              </td>
+              <td class="cell--name">
+                <div style="font-weight:600;">{{this.displayName}}</div>
+                {{#if this.displayNameSmall}}
+                  <div style="font-size:0.75rem; opacity:.7; color:#d1c89c;">(no cartão: {{this.displayNameSmall}})</div>
+                {{/if}}
+                <div style="font-size:0.7rem; opacity:.65; margin-top:2px;">CPF: {{this.cpf}}</div>
+              </td>
+              <td class="cell--city">
+                <div>{{this.city}}</div>
+                {{#if this.group}}<div style="font-size:.75rem; opacity:.7; margin-top:2px;">Grupo: {{this.group}}</div>{{/if}}
+              </td>
+              <td class="cell--status">
+                {{#if this.kitReceived}}
+                  <div class="kit-status kit-status--received">
+                    <div class="kit-status__badge">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                      <strong>Entregue</strong>
+                    </div>
+                    <div class="kit-status__meta">
+                      <div><strong>Retirado por:</strong> {{this.kitReceivedBy}}</div>
+                      {{#if this.kitReceivedSelf}}
+                        <div><em>(o próprio atleta)</em></div>
+                      {{else}}
+                        <div><em>(terceiro autorizado)</em></div>
+                      {{/if}}
+                      <div>{{this.kitReceivedAtStr}}</div>
+                      {{#if this.kitDeliveredBy}}<div style="opacity:.8;">Voluntário: {{this.kitDeliveredBy}}</div>{{/if}}
+                    </div>
+                  </div>
+                {{else}}
+                  <div class="kit-status kit-status--pending">
+                    <div class="kit-status__badge kit-status__badge--pending">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/></svg>
+                      <strong>Pendente</strong>
+                    </div>
+                    <div class="kit-status__meta"><em>Aguardando retirada</em></div>
+                  </div>
+                {{/if}}
+              </td>
+              <td>
+                <div class="table-actions" style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
+                  {{#unless this.kitReceived}}
+                    <form method="POST" action="/admin/kits/{{this.id}}/recebido-proprio" style="display:inline;" data-confirm="Marcar kit placa {{this.paidOrderStr}} como RETIRADO PELO PRÓPRIO ATLETA?">
+                      <button type="submit" class="btn btn--kit btn--kit-receive-self" title="Marcar que o atleta retirou pessoalmente">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                        Entregue ao atleta
+                      </button>
+                    </form>
+                    <button type="button" class="btn btn--kit btn--kit-receive-third" data-open-third="{{this.id}}" data-name="{{this.displayName}}" data-plate="{{this.paidOrderStr}}" title="Marcar que outra pessoa retirou para ele">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M13 8h8"/><path d="M13 12h5"/></svg>
+                      Entregue a terceiro
+                    </button>
+                  {{else}}
+                    <form method="POST" action="/admin/kits/{{this.id}}/cancelar-recebimento" style="display:inline;" data-confirm="ATENÇÃO: Cancelar recebimento do kit placa {{this.paidOrderStr}}? Volta para pendente.">
+                      <button type="submit" class="btn btn--kit btn--kit-cancel" title="Desfazer entrega (marcar como não recebido)">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+                        Cancelar recebimento
+                      </button>
+                    </form>
+                  {{/unless}}
+                </div>
+              </td>
+            </tr>
+          {{/each}}
+        {{else}}
+          <tr><td colspan="5" style="padding:24px; text-align:center; color:#ffe7ad; opacity:.85;">Nenhum atleta encontrado com os filtros aplicados.</td></tr>
+        {{/if}}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Modal para marcar retirada por terceiro -->
+  <div id="modal-third" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal__dialog">
+      <div class="modal__header">
+        <h3 class="modal__title">Kit entregue a terceiro</h3>
+        <button type="button" class="modal__close" data-modal-close aria-label="Fechar">&times;</button>
+      </div>
+      <form id="form-third" method="POST" action="">
+        <div class="modal__content">
+          <p><strong>Placa:</strong> <span id="modal-third-plate"></span></p>
+          <p><strong>Atleta:</strong> <span id="modal-third-name"></span></p>
+          <p style="margin-top:12px;">Informe o <strong>nome completo da pessoa</strong> que autorizadamente retirou o kit para o atleta:</p>
+          <label for="third-received-by" style="display:block; font-weight:600; margin-bottom:6px;">Nome de quem retirou (obrigatório, mínimo 3 letras)</label>
+          <input id="third-received-by" name="receivedBy" type="text" required minlength="3" autocomplete="off" placeholder="Ex: Maria da Silva" class="input" style="width:100%;" />
+        </div>
+        <div class="modal__actions">
+          <button type="submit" class="btn btn--primary">Confirmar entrega</button>
+          <button type="button" class="btn" data-modal-close>Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<style>
+  .kit-status { display:flex; flex-direction:column; gap:6px; }
+  .kit-status__badge { display:inline-flex; gap:6px; align-items:center; padding:5px 10px; border-radius:999px; font-weight:700; font-size:.82rem; width:fit-content; }
+  .kit-status--received .kit-status__badge { background: rgba(56, 142, 60, 0.25); color: #7ef090; border:1px solid rgba(126, 240, 144, 0.35); }
+  .kit-status__badge--pending, .kit-status--pending .kit-status__badge { background: rgba(255, 112, 67, 0.2); color: #ff9a6e; border:1px solid rgba(255, 154, 110, 0.35); }
+  .kit-status__meta { font-size:.78rem; opacity:.9; display:flex; flex-direction:column; gap:2px; }
+  .kit-row--received { background-color: rgba(16, 86, 16, 0.18); }
+  .kit-row--pending { background-color: rgba(86, 36, 16, 0.1); }
+  .btn--kit { display:inline-flex; align-items:center; gap:6px; font-size:.85rem; padding:7px 11px; }
+  .btn--kit-receive-self { background:#388e3c; color:#fff; border-color:#2e7d32; }
+  .btn--kit-receive-self:hover { background:#2e7d32; }
+  .btn--kit-receive-third { background:#d97706; color:#fff; border-color:#b45309; }
+  .btn--kit-receive-third:hover { background:#b45309; }
+  .btn--kit-cancel { background:#9e3131; color:#fff; border-color:#841d1d; }
+  .btn--kit-cancel:hover { background:#841d1d; }
+</style>
+
+<script>
+  (function () {
+    const modal = document.getElementById('modal-third');
+    const form = document.getElementById('form-third');
+    const plateEl = document.getElementById('modal-third-plate');
+    const nameEl = document.getElementById('modal-third-name');
+    const input = document.getElementById('third-received-by');
+    if (!modal || !form) return;
+    document.querySelectorAll('[data-open-third]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-open-third');
+        const plate = btn.getAttribute('data-plate') || '';
+        const nm = btn.getAttribute('data-name') || '';
+        plateEl.textContent = plate;
+        nameEl.textContent = nm;
+        form.action = '/admin/kits/' + id + '/recebido-terceiro';
+        input.value = '';
+        modal.setAttribute('aria-hidden', 'false');
+        modal.classList.remove('hidden');
+        modal.classList.add('is-open');
+        try { setTimeout(() => input.focus(), 60); } catch (_) {}
+      });
+    });
+    document.querySelectorAll('[data-modal-close]').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        modal.classList.remove('is-open');
+        modal.classList.add('hidden');
+        modal.setAttribute('aria-hidden', 'true');
+      });
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal.classList.contains('is-open')) {
+        modal.classList.remove('is-open');
+        modal.classList.add('hidden');
+        modal.setAttribute('aria-hidden', 'true');
+      }
+    });
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('is-open');
+        modal.classList.add('hidden');
+        modal.setAttribute('aria-hidden', 'true');
+      }
+    });
+  })();
+
+  (function () {
+    document.querySelectorAll('form[data-confirm]').forEach(function (f) {
+      f.addEventListener('submit', function (e) {
+        var msg = f.getAttribute('data-confirm');
+        if (msg && !window.confirm(msg)) { e.preventDefault(); return false; }
+        return true;
+      });
+    });
+  })();
+</script>

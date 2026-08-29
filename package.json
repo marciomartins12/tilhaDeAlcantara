@@ -1,0 +1,34 @@
+{
+  "name": "trilhadosquilombos",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "test": "echo \"No tests yet\" && exit 0",
+    "seed:test": "node src/scripts/seedTestData.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "archiver": "^6.0.1",
+    "bcrypt": "^6.0.0",
+    "compression": "^1.8.1",
+    "connect-session-sequelize": "^8.0.2",
+    "docx": "^9.5.1",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "express-handlebars": "^8.0.3",
+    "express-session": "^1.18.2",
+    "mercadopago": "^2.10.0",
+    "multer": "^2.0.2",
+    "mysql2": "^3.15.3",
+    "sequelize": "^6.37.7",
+    "sharp": "^0.34.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}

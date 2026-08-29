@@ -1,0 +1,512 @@
+<section id="inicio" class="hero">
+  <div class="hero__content">
+    <h1 class="hero__title">
+      Trilha do <span class="highlight">Buriti</span>
+    </h1>
+    <p class="hero__subtitle">{{subtitle}}</p>
+    <p class="hero__description">{{description}}</p>
+
+    <div class="hero__actions">
+      <a href="/inscricao" class="btn btn--primary">Inscreva-se Agora <span class="arrow">→</span></a>
+      <a href="#detalhes" class="btn btn--secondary">Saiba Mais</a>
+    </div>
+
+
+  </div>
+</section>
+<div class="section-divider" aria-hidden="true"></div>
+
+<section id="detalhes" class="section details">
+  <div class="section__header">
+    <h2 class="section__title">Sobre a Trilha do Buriti</h2>
+    <span class="section__divider" aria-hidden="true"></span>
+  </div>
+
+
+  <div class="about__card">
+    <div class="section__content">
+      <p>Em cada ruína da <strong>Trilha do Buriti</strong>, a natureza é o cenário e a superação, o destino. <br>
+        No dia <strong>22 de novembro, Alcântara</strong> recebe ciclistas de várias cidades para um evento que celebra
+        <strong>vida, amizade e esporte.</strong>
+        Uma verdadeira festa histórica sobre duas rodas, organizada pelo grupo <strong>Alcântara Pedal Bike!</strong>🚴</p>
+    </div>
+
+    <div class="features">
+      <div class="feature">
+        <div class="feature__icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path
+              d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z">
+            </path>
+          </svg>
+        </div>
+        <h3 class="feature__title">Espírito de Equipe</h3>
+      </div>
+
+      <div class="feature">
+        <div class="feature__icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 20l7-12 4 7 3-5 4 10z"></path>
+          </svg>
+        </div>
+        <h3 class="feature__title">Desafio Constante</h3>
+      </div>
+
+      <div class="feature">
+        <div class="feature__icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="5.5" cy="17.5" r="3.5"></circle>
+            <circle cx="18.5" cy="17.5" r="3.5"></circle>
+            <path d="M5.5 17.5 9 9h4l2 4h3"></path>
+            <path d="M9 9 7 6"></path>
+          </svg>
+        </div>
+        <h3 class="feature__title">Pura Adrenalina</h3>
+      </div>
+    </div>
+  </div>
+
+  <div class="details__grid">
+    <div class="details__map-card">
+      <h3 class="details__subtitle">Mapa do Percurso</h3>
+      <div class="details__map">
+        <div class="video-preview" id="mapVideoPreview" aria-label="Prévia do vídeo do mapa do percurso">
+          <picture>
+            <source srcset="/public/img/rota.webp" type="image/webp" />
+            <img src="/public/img/rota.png" alt="Preview do vídeo do mapa do percurso" class="video-preview__image" />
+          </picture>
+          <button type="button" class="video-preview__play" aria-label="Assistir vídeo do mapa">
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="currentColor"
+              aria-hidden="true">
+              <path d="M8 5v14l11-7z"></path>
+            </svg>
+          </button>
+        </div>
+        <img src="/public/img/peixefundo.png" alt="" aria-hidden="true" class="details__map-overlay" />
+      </div>
+    </div>
+
+    <div class="details__stats">
+      <div class="stat">
+        <span class="stat__label">Distância</span>
+        <span class="stat__value">{{distance}}</span>
+      </div>
+      <div class="stat">
+        <span class="stat__label">Tipo</span>
+        <span class="stat__value">{{tipo}}</span>
+      </div>
+      <div class="stat">
+        <span class="stat__label">Tempo Médio</span>
+        <span class="stat__value">{{tempoMedio}}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="details__perks">
+    <div class="perks-header">
+      <div class="perks-header__icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5A2.5 2.5 0 0 1 4.5 2h15A2.5 2.5 0 0 1 22 4.5 2.5 2.5 0 0 1 19.5 7H18"></path>
+          <path d="M6 2v6a4 4 0 0 0 8 0V6"></path>
+          <path d="M6 10v4a4 4 0 0 0 8 0v-4"></path>
+          <path d="M6 18v2"></path>
+          <path d="M10 18v2"></path>
+          <path d="M14 18v2"></path>
+          <path d="M18 18v2"></path>
+        </svg>
+      </div>
+      <div class="perks-header__text">
+        <h3 class="details__subtitle perks-header__title">Kit Ciclista</h3>
+        <p class="perks-header__subtitle">
+          <span class="perks-header__badge">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 2l2.4 7.4h7.6l-6.2 4.5 2.4 7.4L12 16.8l-6.2 4.5 2.4-7.4L2 9.4h7.6z"/>
+            </svg>
+            <span id="perksCount">+4 itens exclusivos</span>
+          </span>
+          <span class="perks-header__divider" aria-hidden="true"></span>
+          <span class="perks-header__tag">Tudo incluso na sua inscrição</span>
+        </p>
+      </div>
+    </div>
+    <ul class="perks-list is-collapsed" id="perksList">
+      <li>
+        <span class="perk__icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="8" r="4"></circle>
+            <path d="M9 12l-3 8"></path>
+            <path d="M15 12l3 8"></path>
+          </svg>
+        </span>
+        <span class="perk__text" title="Medalha de participação">Medalha</span>
+      </li>
+      <li>
+        <span class="perk__icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="7" width="16" height="10" rx="2" ry="2"></rect>
+            <path d="M7 12h10"></path>
+          </svg>
+        </span>
+        <span class="perk__text" title="Placa de identificação">Placa</span>
+      </li>
+      <li>
+        <span class="perk__icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <rect x="5" y="8" width="14" height="8" rx="4" ry="4"></rect>
+            <path d="M9 12h6"></path>
+          </svg>
+        </span>
+        <span class="perk__text" title="Pulseira de acesso">Pulseira</span>
+      </li>
+      <li>
+        <span class="perk__icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="8" width="18" height="12" rx="2" ry="2"></rect>
+            <path d="M12 8v12"></path>
+            <path d="M3 12h18"></path>
+            <path d="M12 8h-3a3 3 0 1 1 6 0h-3"></path>
+          </svg>
+        </span>
+        <span class="perk__text" title="Brindes exclusivos">Brindes</span>
+      </li>
+    </ul>
+    <div class="perks-actions" id="perksActions">
+      <button type="button" class="btn btn--primary perks__toggle-more" data-perks-action="expand">Exibir todos</button>
+      <button type="button" class="btn btn--primary perks__toggle-less" data-perks-action="collapse"
+        aria-hidden="true">Fechar</button>
+    </div>
+  </div>
+</section>
+<a href="{{whatsappGroupUrl}}" target="_blank" rel="noopener" class="floating-wa"
+  aria-label="Entrar no grupo do WhatsApp">
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"
+    aria-hidden="true">
+    <path
+      d="M17.472 14.382c-.297-.149-1.758-.867-2.031-.964-.273-.099-.472-.148-.671.149-.198.297-.769.964-.943 1.162-.173.199-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.474-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.173.198-.298.297-.496.099-.199.05-.372-.025-.521-.074-.149-.671-1.618-.92-2.219-.242-.582-.487-.503-.671-.511-.173-.008-.372-.01-.571-.01-.198 0-.521.074-.794.372-.273.297-1.04 1.016-1.04 2.479 0 1.463 1.065 2.879 1.213 3.078.149.198 2.099 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.718 2.006-1.412.248-.694.248-1.289.173-1.412-.074-.123-.272-.198-.57-.347z" />
+    <path
+      d="M12.004 2.003c-5.514 0-10 4.486-10 10 0 1.768.469 3.424 1.284 4.858L2 22l5.253-1.378c1.387.751 2.966 1.18 4.751 1.18 5.514 0 10-4.486 10-10s-4.486-10-10-10zm0 18.197c-1.579 0-3.052-.43-4.318-1.175l-.309-.184-3.115.817.832-3.039-.201-.312c-.774-1.235-1.223-2.691-1.223-4.204 0-4.422 3.596-8.018 8.018-8.018 4.422 0 8.018 3.596 8.018 8.018 0 4.422-3.596 8.018-8.018 8.018z" />
+  </svg>
+
+</a>
+<script>
+  (function () {
+    const list = document.getElementById('perksList');
+    const actions = document.getElementById('perksActions');
+    if (!list || !actions) return;
+
+    const expandBtn = actions.querySelector('[data-perks-action="expand"]');
+    const collapseBtn = actions.querySelector('[data-perks-action="collapse"]');
+    const countEl = document.getElementById('perksCount');
+    const totalItems = list.querySelectorAll('li').length;
+    if (countEl && totalItems) {
+      countEl.textContent = `+${totalItems} itens exclusivos`;
+    }
+
+    function isMobile() {
+      return window.matchMedia('(max-width: 767px)').matches;
+    }
+
+    function setCollapsed() {
+      list.classList.add('is-collapsed');
+      list.classList.remove('is-expanded');
+      expandBtn?.removeAttribute('aria-hidden');
+      collapseBtn?.setAttribute('aria-hidden', 'true');
+    }
+
+    function setExpanded() {
+      list.classList.remove('is-collapsed');
+      list.classList.add('is-expanded');
+      expandBtn?.setAttribute('aria-hidden', 'true');
+      collapseBtn?.removeAttribute('aria-hidden');
+    }
+
+    function syncStateOnResize() {
+      if (isMobile()) {
+        if (!list.classList.contains('is-expanded')) setCollapsed();
+        actions.style.display = '';
+      } else {
+        list.classList.remove('is-collapsed');
+        list.classList.add('is-expanded');
+        actions.style.display = 'none';
+      }
+    }
+
+    expandBtn?.addEventListener('click', function () {
+      if (!isMobile()) return;
+      setExpanded();
+      const items = list.querySelectorAll('li');
+      if (items[4]) items[4].focus?.();
+    });
+    collapseBtn?.addEventListener('click', function () {
+      if (!isMobile()) return;
+      setCollapsed();
+      expandBtn.focus?.();
+    });
+
+    window.addEventListener('resize', syncStateOnResize);
+    syncStateOnResize();
+  })();
+</script>
+<script>
+  (function () {
+    const preview = document.getElementById('mapVideoPreview');
+    if (!preview) return;
+    const playBtn = preview.querySelector('.video-preview__play');
+    playBtn?.addEventListener('click', function () {
+      const video = document.createElement('video');
+      video.className = 'details__map-image';
+      video.controls = true;
+      video.autoplay = true;
+      video.playsInline = true;
+      video.preload = 'none';
+      const source = document.createElement('source');
+      source.src = '/public/img/videoRota.mp4';
+      source.type = 'video/mp4';
+      video.appendChild(source);
+      preview.replaceWith(video);
+      video.play?.().catch(() => { });
+    });
+  })();
+</script>
+<div class="section-divider" aria-hidden="true"></div>
+<section id="inscricao" class="section cta">
+  <div class="cta__content">
+    <h2 class="cta__title">Pronto para a Aventura?</h2>
+    <p class="cta__text">
+      Não perca a oportunidade de fazer parte deste evento incrível.
+      Garanta sua vaga agora e prepare-se para pedalar com a Trilha do Buriti!
+    </p>
+    <div class="cta__actions">
+      <a href="/inscricao" class="btn btn--primary btn--cta">Fazer Inscrição <span class="arrow">→</span></a>
+    </div>
+  </div>
+</section>
+<div class="section-divider" aria-hidden="true"></div>
+<section id="baixar-card" class="section cta">
+  <div class="cta__bg-icons" aria-hidden="true"></div>
+
+  <div class="cta__content">
+
+
+
+    <h2 class="cta__title">Card de Identificação (avatar)</h2>
+
+    <div class="cta__preview" aria-label="Prévia do card de identificação (avatar)">
+      <img src="/public/img/modeloPraExibir%20NoCardDeBaixar.png" alt="Modelo de card de identificação (avatar)"
+        class="cta__preview-image" loading="lazy" fetchpriority="low" />
+      <p class="cta__preview-caption">Exemplo de como ficará seu card de identificação</p>
+    </div>
+    <div class="cta__actions">
+      <form id="cpf-inline-form" class="cpf-form" novalidate>
+        <p id="cpf-inline-error" class="alert alert--error hidden" aria-live="polite"></p>
+        <label for="cpf-inline-input" class="sr-only">CPF</label>
+        <div class="cpf-form__row">
+          <input type="text" id="cpf-inline-input" name="cpf" class="cpf-input" placeholder="000.000.000-00"
+            inputmode="numeric" autocomplete="off" maxlength="14" aria-describedby="cpf-inline-error" />
+          <button type="submit" class="btn btn--primary btn--cta">Buscar Card <span class="arrow">→</span></button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+<div class="section-divider" aria-hidden="true"></div>
+<section id="pagamento-pendente" class="section cta">
+  <div class="cta__content">
+    <h2 class="cta__title">Já se inscreveu e não pagou?</h2>
+    <p class="cta__text">Informe seu CPF para acessar seu QR Code PIX e finalizar.</p>
+    <div class="cta__actions">
+      <form id="cpf-pay-form" class="cpf-form" novalidate>
+        <p id="cpf-pay-error" class="alert alert--error hidden" aria-live="polite"></p>
+        <label for="cpf-pay-input" class="sr-only">CPF</label>
+        <div class="cpf-form__row">
+          <input type="text" id="cpf-pay-input" name="cpf" class="cpf-input" placeholder="000.000.000-00"
+            inputmode="numeric" autocomplete="off" maxlength="14" aria-describedby="cpf-pay-error" />
+          <button type="submit" class="btn btn--primary btn--cta">Continuar Pagamento <span
+              class="arrow">→</span></button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+<script>
+  (function () {
+    const form = document.getElementById('cpf-inline-form');
+    const input = document.getElementById('cpf-inline-input');
+    const errorEl = document.getElementById('cpf-inline-error');
+
+    function onlyDigits(str) { return String(str || '').replace(/\D/g, ''); }
+    function formatCpf(digits) {
+      const d = onlyDigits(digits).slice(0, 11);
+      const parts = [];
+      if (d.length > 0) parts.push(d.substring(0, 3));
+      if (d.length > 3) parts.push(d.substring(3, 6));
+      if (d.length > 6) parts.push(d.substring(6, 9));
+      const base = parts.join('.');
+      if (d.length > 9) return `${base}-${d.substring(9, 11)}`;
+      return base;
+    }
+    function isValidCPF(raw) {
+      const cpf = onlyDigits(raw);
+      if (!cpf || cpf.length !== 11) return false;
+      if (/^(\d)\1{10}$/.test(cpf)) return false;
+      let sum = 0;
+      for (let i = 0; i < 9; i++) sum += parseInt(cpf.charAt(i), 10) * (10 - i);
+      let first = (sum * 10) % 11; if (first === 10) first = 0;
+      if (first !== parseInt(cpf.charAt(9), 10)) return false;
+      sum = 0;
+      for (let i = 0; i < 10; i++) sum += parseInt(cpf.charAt(i), 10) * (11 - i);
+      let second = (sum * 10) % 11; if (second === 10) second = 0;
+      if (second !== parseInt(cpf.charAt(10), 10)) return false;
+      return true;
+    }
+
+    input?.addEventListener('input', () => {
+      const digits = onlyDigits(input.value);
+      input.value = formatCpf(digits);
+      // manter o cursor no final para evitar saltos indesejados
+      try { input.setSelectionRange(input.value.length, input.value.length); } catch (_) { }
+      if (!errorEl.classList.contains('hidden')) errorEl.classList.add('hidden');
+    });
+    input?.addEventListener('paste', (e) => {
+      const cd = e.clipboardData || window.clipboardData;
+      // Se temos acesso ao clipboard, tratamos manualmente; caso contrário, deixamos o comportamento padrão
+      if (cd && typeof cd.getData === 'function') {
+        e.preventDefault();
+        const txt = cd.getData('text');
+        const digits = onlyDigits(txt).slice(0, 11);
+        input.value = formatCpf(digits);
+        try { input.setSelectionRange(input.value.length, input.value.length); } catch (_) { }
+      }
+    });
+    // Removido o bloqueio de teclas para maximizar compatibilidade de colagem
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const raw = input?.value || '';
+      const cpfDigits = onlyDigits(raw);
+      if (!isValidCPF(cpfDigits)) {
+        errorEl.textContent = 'CPF inválido.';
+        errorEl.classList.remove('hidden');
+        input?.focus?.();
+        return;
+      }
+      try {
+        const resp = await fetch('/inscricao/consulta-cpf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cpf: cpfDigits })
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+          window.showPopup('Erro na consulta de CPF', data?.error || 'Falha na consulta de CPF', 'error');
+          return;
+        }
+        if (!data?.found) {
+          window.showToast('Você ainda não está inscrito. Indo para a inscrição…', 'info');
+          window.location.href = '/inscricao';
+          return;
+        }
+        if (data.paymentStatus === 'pending') {
+          window.location.href = `/inscricao/pagamento/${data.id}`;
+        } else {
+          window.location.href = `/inscricao/card/${data.id}`;
+        }
+      } catch (e) {
+        window.showPopup('Erro ao consultar CPF', 'Tente novamente em alguns instantes.', 'error');
+      }
+    });
+  })();
+</script>
+
+
+<div class="section-divider" aria-hidden="true"></div>
+<script>
+  (function () {
+    const form = document.getElementById('cpf-pay-form');
+    const input = document.getElementById('cpf-pay-input');
+    const errorEl = document.getElementById('cpf-pay-error');
+    function onlyDigits(str) { return String(str || '').replace(/\D/g, ''); }
+    function formatCpf(digits) {
+      const d = onlyDigits(digits).slice(0, 11);
+      const parts = [];
+      if (d.length > 0) parts.push(d.substring(0, 3));
+      if (d.length > 3) parts.push(d.substring(3, 6));
+      if (d.length > 6) parts.push(d.substring(6, 9));
+      const base = parts.join('.');
+      if (d.length > 9) return `${base}-${d.substring(9, 11)}`;
+      return base;
+    }
+    function isValidCPF(raw) {
+      const cpf = onlyDigits(raw);
+      if (!cpf || cpf.length !== 11) return false;
+      if (/^(\d)\1{10}$/.test(cpf)) return false;
+      let sum = 0;
+      for (let i = 0; i < 9; i++) sum += parseInt(cpf.charAt(i), 10) * (10 - i);
+      let first = (sum * 10) % 11; if (first === 10) first = 0;
+      if (first !== parseInt(cpf.charAt(9), 10)) return false;
+      sum = 0;
+      for (let i = 0; i < 10; i++) sum += parseInt(cpf.charAt(i), 10) * (11 - i);
+      let second = (sum * 10) % 11; if (second === 10) second = 0;
+      if (second !== parseInt(cpf.charAt(10), 10)) return false;
+      return true;
+    }
+    input?.addEventListener('input', () => {
+      const digits = onlyDigits(input.value);
+      input.value = formatCpf(digits);
+      try { input.setSelectionRange(input.value.length, input.value.length); } catch (_) { }
+      if (!errorEl.classList.contains('hidden')) errorEl.classList.add('hidden');
+    });
+    input?.addEventListener('paste', (e) => {
+      const cd = e.clipboardData || window.clipboardData;
+      if (cd && typeof cd.getData === 'function') {
+        e.preventDefault();
+        const txt = cd.getData('text');
+        const digits = onlyDigits(txt).slice(0, 11);
+        input.value = formatCpf(digits);
+        try { input.setSelectionRange(input.value.length, input.value.length); } catch (_) { }
+      }
+    });
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const raw = input?.value || '';
+      const cpfDigits = onlyDigits(raw);
+      if (!isValidCPF(cpfDigits)) {
+        errorEl.textContent = 'CPF inválido.';
+        errorEl.classList.remove('hidden');
+        input?.focus?.();
+        return;
+      }
+      try {
+        const resp = await fetch('/inscricao/consulta-cpf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cpf: cpfDigits })
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+          window.showPopup('Erro na consulta de CPF', data?.error || 'Falha na consulta de CPF', 'error');
+          return;
+        }
+        if (!data?.found) {
+          window.showToast('CPF não encontrado. Faça sua inscrição.', 'info');
+          window.location.href = '/inscricao';
+          return;
+        }
+        if (data.paymentStatus === 'pending') {
+          window.location.href = `/inscricao/pagamento/${data.id}`;
+        } else {
+          window.location.href = `/inscricao/card/${data.id}`;
+        }
+      } catch (e) {
+        window.showPopup('Erro ao consultar CPF', 'Tente novamente em alguns instantes.', 'error');
+      }
+    });
+  })();
+</script>

@@ -1,0 +1,55 @@
+<section class="section details">
+  <div class="section__header">
+    <h2 class="section__title">Meu Perfil</h2>
+    <span class="section__divider" aria-hidden="true"></span>
+  </div>
+
+  <div class="profile-card">
+    <div class="profile-card__header">
+      <span class="profile-card__icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+        </svg>
+      </span>
+      <div class="profile-card__title">
+        <strong>{{admin.name}}</strong>
+        <span class="profile-card__subtitle">{{admin.email}}</span>
+      </div>
+    </div>
+
+    {{> flash}}
+
+    <form method="POST" action="/admin/perfil" class="form" novalidate>
+      <div class="form__group">
+        <label for="name">Nome</label>
+        <input type="text" id="name" name="name" value="{{admin.name}}" placeholder="Seu nome" />
+      </div>
+
+      <div class="profile-card__divider" aria-hidden="true"></div>
+
+      <h3 class="profile-card__section-title">Trocar Senha</h3>
+      <div class="form__group">
+        <label for="currentPassword">Senha atual</label>
+        <input type="password" id="currentPassword" name="currentPassword" placeholder="Senha atual" autocomplete="current-password" />
+      </div>
+      <div class="form__group">
+        <label for="newPassword">Nova senha</label>
+        <input type="password" id="newPassword" name="newPassword" placeholder="Nova senha" autocomplete="new-password" />
+      </div>
+      <div class="form__group">
+        <label for="confirmPassword">Confirmar nova senha</label>
+        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirmar nova senha" autocomplete="new-password" />
+      </div>
+
+      <div class="form__actions">
+        <button type="submit" class="btn btn--primary">Salvar alterações</button>
+        {{#if (eq admin.role 'DESIGN')}}
+          <a href="/design/dashboard" class="btn btn--secondary">Voltar</a>
+        {{else}}
+          <a href="/admin/dashboard" class="btn btn--secondary">Voltar</a>
+        {{/if}}
+      </div>
+    </form>
+  </div>
+</section>

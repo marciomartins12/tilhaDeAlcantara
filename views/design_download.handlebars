@@ -1,0 +1,233 @@
+<section class="section details">
+  <div class="section__header">
+    <h2 class="section__title">Download de Cards</h2>
+    <span class="section__divider" aria-hidden="true"></span>
+  </div>
+
+  <div class="card" style="max-width:720px; margin:0 auto;">
+    <h3 class="card__title">Baixar ZIP por intervalo de placas</h3>
+    {{> flash}}
+    <form class="form" novalidade>
+      <div class="form__group">
+        <label for="from">De (placa)</label>
+        <input type="number" id="from" name="from" min="1" required placeholder="001" />
+      </div>
+      <div class="form__group">
+        <label for="to">Até (placa)</label>
+        <input type="number" id="to" name="to" min="1" required placeholder="100" />
+      </div>
+      <div class="form__actions">
+        <button type="button" id="zipBrowserBtn" class="btn btn--primary">Baixar ZIP</button>
+        <a href="/design/dashboard" class="btn btn--secondary">Voltar</a>
+      </div>
+    </form>
+    <div id="zipProgress" aria-live="polite" style="margin-top:10px; font-size:14px; color:#0e5af0; display:none;"></div>
+    <div id="zipProgressBox" style="display:none; margin-top:12px; padding:12px; border:2px solid #0e5af0; border-radius:8px; background:#eef4ff;">
+      <div style="font-weight:600; color:#0e5af0; margin-bottom:6px;">Download de Cards</div>
+      <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+        <span style="font-size:16px; color:#0c4bd2;">Total: <strong id="zipProgressTotal">0</strong></span>
+        <span style="font-size:16px; color:#0c4bd2;">Progresso: <strong id="zipProgressCount">0</strong> de <strong id="zipProgressTotal2">0</strong></span>
+      </div>
+      <div style="height:10px; background:#dbe7ff; border-radius:6px; overflow:hidden; margin-top:10px;">
+        <div id="zipProgressBar" style="height:10px; width:0%; background:#0e5af0;"></div>
+      </div>
+      <div id="zipManualBox" style="display:none; margin-top:10px;">
+        <a id="zipManualLink" href="#" target="_blank" class="btn btn--primary btn--compact">Abrir ZIP manualmente</a>
+        <small style="display:block; margin-top:6px; color:#0c4bd2;">No iPhone, toque em Abrir ZIP e use o botão de compartilhar para salvar.</small>
+      </div>
+    </div>
+    <div id="downloadListBox" style="display:none; margin-top:14px; padding:12px; border:2px dashed #0e5af0; border-radius:8px; background:#fff;">
+      <div style="font-weight:600; color:#0e5af0; margin-bottom:6px;">Imagens geradas</div>
+      <button type="button" id="openAllBtn" class="btn btn--primary btn--compact">Abrir todas</button>
+      <ul id="downloadList" style="list-style:none; padding:0; margin:10px 0 0; display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:8px;"></ul>
+    </div>
+    <div id="cardsStatsBox" style="margin-top:14px; padding:12px; border:2px dashed #0e5af0; border-radius:8px; background:#f5f9ff;">
+      <div style="font-weight:600; color:#0e5af0; margin-bottom:6px;">Informações</div>
+      <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+        <span style="font-size:16px; color:#0c4bd2;">Pagos (ATLETA): <strong id="cardsTotalPaid">0</strong></span>
+        <span style="font-size:16px; color:#0c4bd2;">Com placa: <strong id="cardsTotalWithOrder">0</strong></span>
+        <span style="font-size:16px; color:#0c4bd2;">Faixa de placas: <strong id="cardsRangeMin">001</strong> até <strong id="cardsRangeMax">000</strong></span>
+      </div>
+    </div>
+    <p class="form__hint">As placas são o campo <strong>paidOrder</strong> dos ciclistas pagos (ATLETA).</p>
+  </div>
+</section>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+<script>
+  (function(){
+    const btn = document.getElementById('zipBrowserBtn');
+    const progressEl = document.getElementById('zipProgress');
+    const progressBox = document.getElementById('zipProgressBox');
+    const progressCount = document.getElementById('zipProgressCount');
+    const progressTotal = document.getElementById('zipProgressTotal');
+    const progressTotal2 = document.getElementById('zipProgressTotal2');
+    const progressBar = document.getElementById('zipProgressBar');
+    const manualBox = document.getElementById('zipManualBox');
+    const manualLink = document.getElementById('zipManualLink');
+    const downloadListBox = document.getElementById('downloadListBox');
+    const downloadList = document.getElementById('downloadList');
+    const openAllBtn = document.getElementById('openAllBtn');
+    const totalPaidEl = document.getElementById('cardsTotalPaid');
+    const totalWithOrderEl = document.getElementById('cardsTotalWithOrder');
+    const rangeMinEl = document.getElementById('cardsRangeMin');
+    const rangeMaxEl = document.getElementById('cardsRangeMax');
+    const inputFrom = document.getElementById('from');
+    const inputTo = document.getElementById('to');
+    (async function initStats(){
+      try {
+        const res = await fetch('/design/cards-stats');
+        const s = await res.json();
+        const min = Number.isFinite(Number(s.minOrder)) ? Number(s.minOrder) : 1;
+        const max = Number.isFinite(Number(s.maxOrder)) ? Number(s.maxOrder) : 0;
+        if (totalPaidEl) totalPaidEl.textContent = String(Number(s.countPaid || 0));
+        if (totalWithOrderEl) totalWithOrderEl.textContent = String(Number(s.countWithOrder || 0));
+        if (rangeMinEl) rangeMinEl.textContent = String(Math.max(1, min)).padStart(3, '0');
+        if (rangeMaxEl) rangeMaxEl.textContent = String(Math.max(0, max)).padStart(3, '0');
+        if (inputFrom && !inputFrom.value) inputFrom.value = String(Math.max(1, min));
+        if (inputTo && !inputTo.value) inputTo.value = String(Math.max(0, max));
+      } catch (_) {}
+    })();
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
+      try {
+        if (progressEl) { progressEl.style.display = ''; progressEl.textContent = 'Preparando...'; }
+        if (progressBox) { progressBox.style.display = ''; }
+        if (progressCount) progressCount.textContent = '0';
+        if (progressTotal) progressTotal.textContent = '0';
+        if (progressTotal2) progressTotal2.textContent = '0';
+        if (progressBar) progressBar.style.width = '0%';
+        btn.disabled = true; btn.textContent = 'Gerando...';
+        const from = Number(document.getElementById('from').value);
+        const to = Number(document.getElementById('to').value);
+        if (!Number.isFinite(from) || !Number.isFinite(to) || from < 1 || to < from) {
+          if (progressEl) { progressEl.textContent = 'Parâmetros inválidos'; setTimeout(() => { progressEl.style.display = 'none'; }, 1200); }
+          if (progressBox) progressBox.style.display = 'none';
+          btn.disabled = false; btn.textContent = 'Baixar ZIP';
+          return;
+        }
+        if (progressEl) progressEl.textContent = 'Carregando dados...';
+        const res = await fetch(`/design/cards-data?from=${from}&to=${to}`);
+        const json = await res.json();
+        const items = Array.isArray(json.items) ? json.items : [];
+        if (!items.length) {
+          if (progressEl) { progressEl.textContent = 'Nenhum item encontrado'; setTimeout(() => { progressEl.style.display = 'none'; }, 1200); }
+          if (progressBox) progressBox.style.display = 'none';
+          window.showToast && window.showToast('Nenhum item encontrado', 'info');
+          btn.disabled = false; btn.textContent = 'Baixar ZIP';
+          return;
+        }
+        if (progressEl) progressEl.textContent = 'Carregando molde...';
+        const bg = await loadImage('/public/img/moldeCard.png');
+        let done = 0;
+        if (progressEl) progressEl.textContent = `Gerando 0 de ${items.length}...`;
+        if (progressTotal) progressTotal.textContent = String(items.length);
+        if (progressTotal2) progressTotal2.textContent = String(items.length);
+        if (progressCount) progressCount.textContent = '0';
+        if (progressBar) progressBar.style.width = '0%';
+        const ua = navigator.userAgent || navigator.vendor || window.opera || '';
+        const zip = new JSZip();
+        for (const it of items) {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = bg.width;
+            canvas.height = bg.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+            const centerX = Math.round(canvas.width / 2);
+            const nameSize = Math.round(canvas.width * 0.080);
+            const groupSize = Math.round(canvas.width * 0.055);
+            const citySize = Math.round(canvas.width * 0.036);
+            const nameY = Math.round(canvas.height * 0.806);
+            const groupY = Math.round(canvas.height * 0.862);
+            const cityY = Math.round(canvas.height * 0.895);
+            await Promise.all([
+              document.fonts.load(`normal ${nameSize}px \"Bebas Neue\"`),
+              document.fonts.load(`normal ${groupSize}px \"Bebas Neue\"`),
+              document.fonts.load(`normal ${citySize}px \"Bebas Neue\"`)
+            ]);
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#0e5af0';
+            let nameText = String(it.name || '').trim();
+            const parts = nameText.split(/\s+/).filter(Boolean);
+            nameText = parts.slice(0, 2).join(' ').toUpperCase();
+            const groupText = String(it.group || '').toUpperCase();
+            const cityText = String(it.city || '').toUpperCase();
+            ctx.font = `normal ${nameSize}px \"Bebas Neue Cyrillic\",\"Bebas Neue\", Arial, sans-serif`;
+            if (nameText) ctx.fillText(nameText, centerX, nameY);
+            ctx.font = `normal ${groupSize}px \"Bebas Neue Cyrillic\",\"Bebas Neue\", Arial, sans-serif`;
+            if (groupText) ctx.fillText(groupText, centerX, groupY);
+            ctx.font = `normal ${citySize}px \"Bebas Neue Cyrillic\",\"Bebas Neue\", Arial, sans-serif`;
+            if (cityText) ctx.fillText(cityText, centerX, cityY);
+            const cx = Math.round(canvas.width * 0.5);
+            const cy = Math.round(canvas.height * 0.51);
+            const radius = Math.round(canvas.width * 0.2915);
+            const diameter = radius * 2;
+            try {
+              const avatarImg = await loadImage(`/inscricao/avatar-data/${it.id}`);
+              ctx.save();
+              ctx.beginPath();
+              ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+              ctx.closePath();
+              ctx.clip();
+              ctx.drawImage(avatarImg, cx - radius, cy - radius, diameter, diameter);
+              ctx.restore();
+            } catch (_) {}
+            const placa = Number(it.paidOrder);
+            const placaStr = Number.isFinite(placa) ? String(Math.min(placa, 999)).padStart(3, '0') : '---';
+            const nameSlug = String(it.name || '').trim().split(/\s+/).slice(0,2).join('_').toUpperCase().replace(/[^A-Z0-9_]/g, '');
+            const fname = `card_${placaStr}_${nameSlug}_${it.id}.png`;
+            const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png', 0.92));
+            await zip.file(fname, blob);
+            await new Promise(r => setTimeout(r, 150));
+          } catch (_) {}
+          done++;
+          if (progressEl) progressEl.textContent = `Gerando ${done} de ${items.length}...`;
+          if (progressCount) progressCount.textContent = String(done);
+          if (progressBar) progressBar.style.width = `${Math.round((done / items.length) * 100)}%`;
+        }
+        // downloads feitos individualmente
+        if (progressEl) { progressEl.textContent = 'Concluído'; setTimeout(() => { progressEl.style.display = 'none'; }, 2000); }
+        if (progressCount) progressCount.textContent = String(items.length);
+        if (progressBar) progressBar.style.width = '100%';
+        if (progressEl) progressEl.textContent = 'Compactando ZIP...';
+        let zipBlob;
+        try { zipBlob = await zip.generateAsync({ type: 'blob' }); } catch (_) { zipBlob = null; }
+        const zipName = `cards_${String(from).padStart(3,'0')}_${String(to).padStart(3,'0')}.zip`;
+        let shared = false;
+        if (zipBlob) {
+          const isIOS = /iPad|iPhone|iPod/.test(ua) || (/Mac/.test(ua) && 'ontouchend' in document);
+          const canShareZip = !!(navigator?.canShare) && (() => { try { const f = new File([zipBlob], zipName, { type: 'application/zip' }); return navigator.canShare({ files: [f] }); } catch (_) { return false; } })();
+          if (canShareZip && typeof navigator.share === 'function') {
+            try { const zipFile = new File([zipBlob], zipName, { type: 'application/zip' }); await navigator.share({ files: [zipFile], title: zipName }); shared = true; } catch (_) { shared = false; }
+          }
+          if (!shared) {
+            try { saveAs(zipBlob, zipName); shared = true; } catch (_) { shared = false; }
+          }
+          if (!shared) {
+            try {
+              const url = URL.createObjectURL(zipBlob);
+              if (manualLink) { manualLink.href = url; manualLink.download = zipName; manualBox.style.display = ''; }
+              try { window.open(url, '_blank'); } catch (_) {}
+            } catch (_) {}
+          }
+        }
+        if (progressEl) { progressEl.textContent = 'Concluído'; setTimeout(() => { progressEl.style.display = 'none'; }, 2000); }
+        btn.disabled = false; btn.textContent = 'Baixar ZIP';
+      } catch (_) {}
+      finally {
+        if (btn && btn.disabled) { btn.disabled = false; btn.textContent = 'Baixar ZIP'; }
+      }
+    });
+    function loadImage(src) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = src;
+      });
+    }
+  })();
+</script>
+</section>

@@ -1,0 +1,82 @@
+<section class="section">
+  <div class="section__header section__header--gallery-admin">
+    <h2 class="section__title">Gerenciar Galeria</h2>
+    {{#if (eq admin.role 'DESIGN')}}
+      <a href="/design/dashboard" class="btn btn--secondary btn--compact section__back">Voltar</a>
+    {{else}}
+      <a href="/admin/dashboard" class="btn btn--secondary btn--compact section__back">Voltar</a>
+    {{/if}}
+    <span class="section__divider" aria-hidden="true"></span>
+  </div>
+  {{> flash}}
+  <div class="section__content">
+    <div class="card" style="margin-bottom: 16px;">
+      <h3 class="card__title">Adicionar item</h3>
+      <form action="/admin/galeria" method="POST" enctype="multipart/form-data" class="form">
+        <div class="form__group">
+          <label for="title">Título (opcional)</label>
+          <input id="title" name="title" type="text" placeholder="Ex: Paisagem da trilha" />
+          <small class="form__hint">Se vazio, será exibido apenas a mídia.</small>
+        </div>
+        <div class="form__group">
+          <label for="description">Descrição (opcional)</label>
+          <textarea id="description" name="description" rows="3" placeholder="Breve descrição do item"></textarea>
+          <small class="form__hint">Texto curto ajuda a contextualizar a imagem ou vídeo.</small>
+        </div>
+        <div class="form__group">
+          <label for="media">Arquivo</label>
+          <input id="media" name="media" type="file" accept="image/*,video/*" required class="file-input-hidden" />
+          <label for="media" id="fileDrop" class="file-drop" aria-label="Selecionar arquivo para a galeria">
+            <span class="file-drop__text">Arraste e solte aqui, ou clique para escolher</span>
+          </label>
+          <small class="form__hint">Aceita imagens (JPG/PNG) e vídeos curtos (MP4).</small>
+          <div id="mediaPreview" class="file-preview" aria-live="polite"></div>
+        </div>
+        <div class="form__actions">
+          <button type="submit" class="btn btn--primary">Adicionar à galeria</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3 class="card__title">Itens da galeria</h3>
+      {{#if items.length}}
+        <div class="gallery-grid">
+          {{#each items}}
+            <div class="gallery-item">
+              <div class="gallery-item__media">
+                {{#if (isImage this.type this.filePath this.mimeType this.originalName)}}
+                  <img src="{{mediaUrl this.filePath this.id}}" alt="{{this.title}}" class="gallery-item__thumb" data-modal-target="#modal-image-view" />
+                {{else}}
+                  {{#if (isVideo this.type this.filePath this.mimeType this.originalName)}}
+                    <video src="{{mediaUrl this.filePath this.id}}" class="gallery-item__thumb" controls preload="metadata"></video>
+                  {{else}}
+                    <p>Tipo de mídia não reconhecido.</p>
+                  {{/if}}
+                {{/if}}
+              </div>
+              <div class="gallery-item__meta">
+                <div class="gallery-item__title-row">
+                  <strong>{{this.title}}</strong>
+                </div>
+                <p class="gallery-item__desc">{{this.description}}</p>
+              </div>
+              <div class="gallery-item__actions">
+                {{#if (isImage this.type this.filePath this.mimeType this.originalName)}}
+                  <button type="button" class="btn btn--primary btn--compact js-open-full-image" data-image-src="{{mediaUrl this.filePath this.id}}" data-image-alt="{{this.title}}" data-modal-target="#modal-image-view">Ver imagem completa</button>
+                {{/if}}
+                <form method="POST" action="/admin/galeria/{{this.id}}/excluir" data-confirm="Excluir este item?">
+                  <button class="btn btn--danger btn--compact" type="submit">Excluir</button>
+                </form>
+              </div>
+            </div>
+          {{/each}}
+        </div>
+      {{else}}
+        <p>Nenhum item na galeria ainda.</p>
+      {{/if}}
+    </div>
+  </div>
+</section>
+
+<script src="/public/js/galeria.js"></script>
