@@ -4,7 +4,7 @@ module.exports = {
       pageTitle: 'Trilha do Buriti',
       subtitle: 'Aventura, Natureza e Superação',
       description:
-        'Em cada ruína da Trilha do Buriti, a natureza é o cenário e a superação, o destino. No dia 22 de novembro, Alcântara acolhe ciclistas de várias cidades para um evento que celebra vida, amizade e esporte. Uma verdadeira festa histórica sobre duas rodas, organizada pelo grupo Alcântara Pedal Bike!🚴',
+        'No dia 22 de novembro, Alcântara acolhe ciclistas de várias cidades para um evento que celebra vida, amizade e esporte. Uma verdadeira festa histórica sobre duas rodas, organizada pelo grupo Alcântara Pedal Bike!🚴',
       distance: '40km',
       tipo: 'MTB',
       tempoMedio: '2:00h',
