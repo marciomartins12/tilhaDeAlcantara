@@ -1174,7 +1174,7 @@ body.no-scroll {
 }
 
 .section__content p {
-  color: #000000;
+  color: rgba(255, 255, 255, 0.92);
   line-height: 1.7;
   letter-spacing: 0.2px;
   margin: 0 0 16px 0;
@@ -1182,7 +1182,7 @@ body.no-scroll {
 }
 
 .section__content strong {
-  color: var(--primary-700);
+  color: #fff;
 }
 
 .features {
@@ -1211,7 +1211,7 @@ body.no-scroll {
 }
 
 .feature__title {
-  color: #000000;
+  color: #fff;
   font-weight: 700;
   margin: 0;
   font-size: 0.95rem;
@@ -1785,7 +1785,7 @@ body.no-scroll {
 }
 
 .details__subtitle {
-  color: #000000;
+  color: #fff;
   margin: 0 0 10px;
   font-weight: 800;
 }
@@ -1806,7 +1806,7 @@ body.no-scroll {
   position: relative;
 }
 
-.details__map-overlay {
+.details__map-overlay-picture {
   position: absolute;
   right: -50px;
   bottom: -60px;
@@ -1815,10 +1815,17 @@ body.no-scroll {
   pointer-events: none;
   z-index: 99999;
   filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.45));
+  display: block;
+}
+
+.details__map-overlay {
+  width: 100%;
+  height: auto;
+  display: block;
 }
 
 @media (min-width: 768px) {
-  .details__map-overlay {
+  .details__map-overlay-picture {
     right: -70px;
     bottom: -80px;
     width: clamp(150px, 36%, 260px);
@@ -3041,6 +3048,7 @@ body.no-scroll {
 .modal__title {
   font-weight: 800;
   margin: 0;
+  color: #fff;
 }
 
 .modal__close {
@@ -3056,6 +3064,13 @@ body.no-scroll {
 .modal__content p {
   margin: 0 0 10px;
   line-height: 1.7;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.modal__content strong,
+.modal__content p strong {
+  color: var(--secondary);
+  font-weight: 800;
 }
 
 /* Variação de sucesso para confirmar pagamento */
@@ -3187,6 +3202,12 @@ body.no-scroll {
   word-break: break-word;
   hyphens: auto;
   padding-top: 1px;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.modal-list__text strong {
+  color: var(--secondary);
+  font-weight: 800;
 }
 
 .modal--terms .modal__dialog {

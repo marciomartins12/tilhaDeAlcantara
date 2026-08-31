@@ -118,7 +118,7 @@
           return;
         }
         if (progressEl) progressEl.textContent = 'Carregando molde...';
-        const bg = await loadImage('/public/img/moldeCard.png');
+        const bg = await loadImage('/public/img/moldeCard.webp').catch(() => loadImage('/public/img/moldeCard.png'));
         let done = 0;
         if (progressEl) progressEl.textContent = `Gerando 0 de ${items.length}...`;
         if (progressTotal) progressTotal.textContent = String(items.length);

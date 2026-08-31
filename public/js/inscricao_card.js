@@ -83,7 +83,7 @@
   async function compose() {
     try {
       await ensureData();
-      const bg = await loadImage('/public/img/moldeCard.png');
+      const bg = await loadImage('/public/img/moldeCard.webp').catch(() => loadImage('/public/img/moldeCard.png'));
       // Carrega somente do endpoint binário (BLOB no banco)
       let avatarImg;
       const avatarPathAttr = (composer.getAttribute('data-avatar-path') || '').trim();

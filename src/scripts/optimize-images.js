@@ -5,12 +5,12 @@ const sharp = require('sharp');
 const imgDir = path.join(__dirname, '..', '..', 'public', 'img');
 
 const targets = [
-  { file: 'fundoMato.png',               quality: 72, maxWidth: 1920, force: true },
-  { file: 'peixefundo.png',               quality: 82, maxWidth: 1600, force: true },
-  { file: 'moldeCard.png',                quality: 80, maxWidth: 1200, force: true },
-  { file: 'logo.png',                     quality: 80, maxWidth: 1200, force: true },
-  { file: 'modeloPraExibir NoCardDeBaixar.png', quality: 78, maxWidth: 1200, force: true },
-  { file: 'rota.png',                     quality: 82, maxWidth: 1600, force: true },
+  { file: 'fundoMato.png',               quality: 70, maxWidth: 1600, force: true },
+  { file: 'peixefundo.png',               quality: 75, maxWidth: 1400, force: true },
+  { file: 'moldeCard.png',                quality: 75, maxWidth: 1000, force: true },
+  { file: 'logo.png',                     quality: 78, maxWidth: 600,  force: true },
+  { file: 'modeloPraExibir NoCardDeBaixar.png', quality: 70, maxWidth: 900, force: true },
+  { file: 'rota.png',                     quality: 75, maxWidth: 1400, force: true },
 ];
 
 function toKB(bytes) { return Math.round(bytes / 1024) + ' KB'; }

@@ -85,7 +85,10 @@
             </svg>
           </button>
         </div>
-        <img src="/public/img/peixefundo.png" alt="" aria-hidden="true" class="details__map-overlay" />
+        <picture class="details__map-overlay-picture">
+          <source srcset="/public/img/peixefundo.webp" type="image/webp">
+          <img src="/public/img/peixefundo.png" alt="" aria-hidden="true" class="details__map-overlay" />
+        </picture>
       </div>
     </div>
 
@@ -299,8 +302,11 @@
     <h2 class="cta__title">Card de Identificação (avatar)</h2>
 
     <div class="cta__preview" aria-label="Prévia do card de identificação (avatar)">
-      <img src="/public/img/modeloPraExibir%20NoCardDeBaixar.png" alt="Modelo de card de identificação (avatar)"
-        class="cta__preview-image" loading="lazy" fetchpriority="low" />
+      <picture>
+        <source srcset="/public/img/modeloPraExibir%20NoCardDeBaixar.webp" type="image/webp">
+        <img src="/public/img/modeloPraExibir%20NoCardDeBaixar.png" alt="Modelo de card de identificação (avatar)"
+          class="cta__preview-image" loading="lazy" fetchpriority="low" />
+      </picture>
       <p class="cta__preview-caption">Exemplo de como ficará seu card de identificação</p>
     </div>
     <div class="cta__actions">
