@@ -41,7 +41,7 @@
   }
   // Permitir ajustar via atributos ou query (?circle-cx=, ?circle-cy=, ?circle-r=)
   const circleCxRatio = readNumberPref('data-circle-cx', 0.52);
-  const circleCyRatio = readNumberPref('data-circle-cy', 0.56);
+  const circleCyRatio = readNumberPref('data-circle-cy', 0.50);
   const circleRadiusRatio = readNumberPref('data-circle-r', 0.31);
   // Overscan (pode vir via atributo ou query string ?overscan=1.0)
   function readNumberPref(nameAttr, fallback) {
@@ -168,12 +168,12 @@
       } catch (_) {}
 
       // Textos (nome/grupo/cidade) usando Bebas Neue
-      const centerX = canvas.width / 2 +75;
-      const baseNameSize = Math.round(canvas.width * 0.080);
+      const centerX = canvas.width / 2 +120;
+      const baseNameSize = Math.round(canvas.width * 0.06);
       let nameSize = baseNameSize;
-      const groupSize = Math.round(canvas.width * 0.06);
-      const citySize = Math.round(canvas.width * 0.06);
-      const typeSize = Math.round(canvas.width * 0.06);
+      const groupSize = Math.round(canvas.width * 0.05);
+      const citySize = Math.round(canvas.width * 0.05);
+      const typeSize = Math.round(canvas.width * 0.05);
 
       // Posições ajustadas: mais para baixo e separação mínima
       const nameY = Math.round(canvas.height * 0.862);
