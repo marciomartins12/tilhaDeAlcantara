@@ -724,6 +724,21 @@ async function avatarData(req, res) {
     const { id } = req.params;
     const reg = await Registration.findByPk(id);
     if (!reg) return res.status(404).send('Inscrição não encontrada');
+    // Gerar ETag baseado em updatedAt + tamanho
+    const tsUpdated = reg.updatedAt ? new Date(reg.updatedAt).getTime().toString(36) : '0';
+    const fromDb = !!(reg.avatarData && reg.avatarData.length);
+    const sizeBytes = fromDb
+      ? (Buffer.isBuffer(reg.avatarData) ? reg.avatarData.length : Buffer.from(reg.avatarData).length)
+      : (reg.avatarPath ? 'f' : '0');
+    const etag = `W/"ava-${id}-${tsUpdated}-${sizeBytes}"`;
+    const ifNoneMatch = req.headers['if-none-match'];
+    if (ifNoneMatch && ifNoneMatch === etag) {
+      res.statusCode = 304;
+      res.setHeader('ETag', etag);
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+      return res.end();
+    }
+
     // Preferir dado binário do banco; fallback para arquivo em disco
     if (reg.avatarData && reg.avatarData.length) {
       const buf = Buffer.isBuffer(reg.avatarData) ? reg.avatarData : Buffer.from(reg.avatarData);
@@ -739,13 +754,32 @@ async function avatarData(req, res) {
         mime = 'image/webp';
       }
       res.set('Content-Type', mime);
+      res.setHeader('ETag', etag);
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate, stale-while-revalidate=60');
       return res.send(buf);
     }
     if (reg.avatarPath) {
       const filePath = path.join(__dirname, '..', '..', 'public', reg.avatarPath);
       try {
+        const stat = fs.statSync(filePath);
         const buf = fs.readFileSync(filePath);
-        res.set('Content-Type', 'image/png');
+        const fileEtag = `W/"ava-${id}-f-${stat.mtimeMs.toString(36)}-${buf.length}"`;
+        const fInm = req.headers['if-none-match'];
+        if (fInm && fInm === fileEtag) {
+          res.statusCode = 304;
+          res.setHeader('ETag', fileEtag);
+          res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+          return res.end();
+        }
+        // Tentar detectar mime por extensão
+        const ext = (path.extname(reg.avatarPath) || '').toLowerCase().replace('.', '');
+        let mime = 'image/png';
+        if (['jpg','jpeg'].includes(ext)) mime = 'image/jpeg';
+        else if (ext === 'gif') mime = 'image/gif';
+        else if (ext === 'webp') mime = 'image/webp';
+        res.set('Content-Type', mime);
+        res.setHeader('ETag', fileEtag);
+        res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate, stale-while-revalidate=60');
         return res.send(buf);
       } catch (e) {
         // continua para 404

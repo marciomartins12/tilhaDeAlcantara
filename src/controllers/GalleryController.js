@@ -44,7 +44,6 @@ async function publicPage(req, res) {
   } catch (_) {}
   res.render('galeria', { items: normalized, activeNav: 'galeria' });
 }
-
 // Admin: listar e gerenciar
 async function adminList(req, res) {
   if (!isAdmin(req)) return res.redirect('/admin');
@@ -184,6 +183,19 @@ async function getMedia(req, res) {
     if (!mime) mime = (item.type === 'image' ? 'image/jpeg' : 'video/mp4');
     const isVideo = (item.type === 'video') || (mime.startsWith('video/'));
 
+    // === ETag baseada no conteúdo + data de atualização (garante invalidar quando trocar a foto) ===
+    const tsUpdated = item.updatedAt ? new Date(item.updatedAt).getTime().toString(36) : '0';
+    const sizeBytes = item.data ? item.data.length : (item.filePath ? 'f' : '0');
+    const etag = `W/"${id}-${tsUpdated}-${sizeBytes}-${mime.length}"`;
+    // Se navegador já tem essa versão → 304 Not Modified (sem reenviar arquivo)
+    const ifNoneMatch = req.headers['if-none-match'];
+    if (ifNoneMatch && ifNoneMatch === etag) {
+      res.statusCode = 304;
+      res.setHeader('ETag', etag);
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+      return res.end();
+    }
+
     // Se não há BLOB, tentar servir do disco (itens antigos)
     if (!item.data && item.filePath) {
       const rel = (item.filePath || '').replace(/\\/g, '/');
@@ -191,6 +203,15 @@ async function getMedia(req, res) {
       if (!fs.existsSync(abs)) return res.status(404).send('Arquivo não encontrado');
       const stat = fs.statSync(abs);
       const size = stat.size;
+      const lastModMs = stat.mtimeMs.toString(36);
+      const fileEtag = `W/"${id}-f-${lastModMs}-${size}"`;
+      const fileInm = req.headers['if-none-match'];
+      if (fileInm && fileInm === fileEtag) {
+        res.statusCode = 304;
+        res.setHeader('ETag', fileEtag);
+        res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+        return res.end();
+      }
       if (req.headers.range) {
         const range = req.headers.range;
         const parts = range.replace(/bytes=/, '').split('-');
@@ -205,14 +226,16 @@ async function getMedia(req, res) {
         res.setHeader('Accept-Ranges', 'bytes');
         res.setHeader('Content-Length', end - start + 1);
         res.setHeader('Content-Type', mime);
-        res.setHeader('Cache-Control', 'public, max-age=3600');
+        res.setHeader('ETag', fileEtag);
+        res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate, stale-while-revalidate=60');
         const stream = fs.createReadStream(abs, { start, end });
         return stream.pipe(res);
       }
       res.status(200);
       res.setHeader('Content-Type', mime);
       res.setHeader('Accept-Ranges', 'bytes');
-      res.setHeader('Cache-Control', 'public, max-age=3600');
+      res.setHeader('ETag', fileEtag);
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate, stale-while-revalidate=60');
       res.setHeader('Content-Length', size);
       const stream = fs.createReadStream(abs);
       return stream.pipe(res);
@@ -237,7 +260,8 @@ async function getMedia(req, res) {
       res.setHeader('Accept-Ranges', 'bytes');
       res.setHeader('Content-Length', chunk.length);
       res.setHeader('Content-Type', mime);
-      res.setHeader('Cache-Control', 'public, max-age=3600');
+      res.setHeader('ETag', etag);
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate, stale-while-revalidate=60');
       return res.end(chunk);
     }
 
@@ -245,7 +269,8 @@ async function getMedia(req, res) {
     res.status(200);
     res.setHeader('Content-Type', mime);
     res.setHeader('Accept-Ranges', 'bytes');
-    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('ETag', etag);
+    res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate, stale-while-revalidate=60');
     res.setHeader('Content-Length', item.data.length);
     return res.end(item.data);
   } catch (err) {
@@ -274,12 +299,18 @@ function classifyItem(item) {
 }
 
 // Converte instancia Sequelize em objeto “plain” seguro para template (sem BLOB `data`)
+// Inclui `cacheKey` (timestamp de updatedAt) para cache busting automático na URL
 function toViewItem(instance) {
   try {
     const hasData = !!instance?.data;
     const plain = instance?.get ? instance.get({ plain: true }) : instance;
-    const { id, title, description, type, filePath, mimeType, originalName, createdAt } = plain || {};
-    return { id, title, description, type, filePath, mimeType, originalName, createdAt, hasData };
+    const { id, title, description, type, filePath, mimeType, originalName, createdAt, updatedAt } = plain || {};
+    // Cache key = timestamp da última atualização em base36 (curto e único)
+    let cacheKey = '0';
+    if (updatedAt) {
+      try { cacheKey = new Date(updatedAt).getTime().toString(36); } catch (_) { cacheKey = '0'; }
+    }
+    return { id, title, description, type, filePath, mimeType, originalName, createdAt, updatedAt, hasData, cacheKey };
   } catch (_) {
     return instance;
   }

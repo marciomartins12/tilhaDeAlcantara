@@ -77,46 +77,73 @@ if (compression) {
   }));
 }
 
-// Static files com cache agressivo para recursos imutáveis (imagens, CSS, JS, fontes)
+// ===== Serviço de arquivos estáticos com cache DIFERENCIADO =====
+// Regra 1: tudo em /public/uploads/ (avatars, galeria em disco) → cache CURTO, POIS MUDAM!
+// Regra 2: assets fixos (img/, css/, js/) → cache LONGO, pois tem ?v=HASH via asset helper
 const oneYear = 60 * 60 * 24 * 365 * 1000;
 const staticDir = path.join(__dirname, '..', 'public');
+
+function setCacheHeadersForStatic(res, filePath, stat) {
+  const ext = path.extname(filePath).toLowerCase();
+  const isDevEnv = isDev;
+  if (isDevEnv) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    return;
+  }
+  // Verificar se está dentro de /public/uploads/ (avatars, galeria em disco) — cache curto
+  const normalized = filePath.replace(/\\/g, '/');
+  const isInUploads = normalized.includes('/public/uploads/') || normalized.includes('\\public\\uploads\\') || normalized.includes('/uploads/avatars/') || normalized.includes('/uploads/gallery/');
+  if (isInUploads) {
+    // Cache CURTO: até 1 hora, e sempre revalidar com servidor para pegar atualizações
+    res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate, stale-while-revalidate=60');
+    return;
+  }
+  if (['.webp', '.jpg', '.jpeg', '.png', '.gif', '.svg', '.mp4', '.webm', '.woff2', '.woff', '.ttf', '.otf'].includes(ext)) {
+    // Arquivo imutável: possui ?v=HASH via helper {{asset}}
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  } else if (['.css', '.js', '.json'].includes(ext)) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable, must-revalidate');
+  } else {
+    res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
+  }
+}
+
 app.use('/public', express.static(staticDir, {
   maxAge: oneYear,
   immutable: true,
   etag: true,
   lastModified: true,
-  setHeaders: (res, filePath, stat) => {
-    const ext = path.extname(filePath).toLowerCase();
-    if (isDev) {
-      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-      return;
-    }
-    if (['.webp', '.jpg', '.jpeg', '.png', '.gif', '.svg', '.mp4', '.webm', '.woff2', '.woff', '.ttf', '.otf'].includes(ext)) {
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-    } else if (['.css', '.js', '.json'].includes(ext)) {
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable, must-revalidate');
-    } else {
-      res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
-    }
-  }
+  setHeaders: setCacheHeadersForStatic,
 }));
-// Fallback leve: 500KB por arquivo para compressão automática (se rodar sob proxy com gzip/brotli)
+// Fallback leve: Accept-Ranges
 app.use('/public', (req, res, next) => {
   res.setHeader('Accept-Ranges', 'bytes');
   next();
 });
 
-// Cache bust middleware: se NODE_ENV = dev → forçar NO-STORE em HTML 
+// ===== HTML e páginas dinâmicas: NUNCA fazer cache (exibir dados sempre atualizados) =====
+// Aplica a TODAS as respostas que sejam HTML (páginas)
 app.use((req, res, next) => {
   res.setHeader('Vary', 'Accept-Encoding, User-Agent');
-  if (isDev) {
-    const isHtml = !req.path.includes('.') || req.path.endsWith('.html') || req.path.endsWith('.htm');
-    if (isHtml || req.path === '/' || req.path.startsWith('/inscricao') || req.path.startsWith('/admin') || req.path.startsWith('/home')) {
+  const pathLower = req.path.toLowerCase();
+  const isHtml = !req.path.includes('.')
+    || req.path.endsWith('.html')
+    || req.path.endsWith('.htm')
+    || pathLower.startsWith('/admin')
+    || pathLower.startsWith('/inscricao')
+    || pathLower.startsWith('/design')
+    || pathLower.startsWith('/galeria')
+    || pathLower === '/';
+  if (isHtml) {
+    if (isDev) {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, post-check=0, pre-check=0');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
+    } else {
+      // Produção: HTML com cache muito curto (1 minuto + revalidação)
+      res.setHeader('Cache-Control', 'no-cache, private, max-age=60, must-revalidate, stale-while-revalidate=60');
     }
   }
   next();
@@ -164,12 +191,22 @@ app.engine(
         const ext = extPath || extName;
         return ['mp4', 'webm', 'mov', 'm4v', 'avi', 'mkv', '3gp', 'wmv', 'mpeg', 'mpg', 'ogv'].includes(ext);
       },
-      mediaUrl: (filePath, id) => {
-        if (filePath) {
-          const safePath = filePath.replace(/\\\\/g, '/');
-          return `/public/${safePath}`;
+      mediaUrl: (filePath, id, cacheKey) => {
+        // Aceita também passar o item inteiro como 1º argumento: mediaUrl(item)
+        let fpath = filePath;
+        let fid = id;
+        let fcache = cacheKey;
+        if (filePath && typeof filePath === 'object') {
+          fpath = filePath.filePath || null;
+          fid = filePath.id;
+          fcache = filePath.cacheKey;
         }
-        return `/media/gallery/${id}`;
+        const suffix = fcache ? `?v=${String(fcache)}` : '';
+        if (fpath) {
+          const safePath = String(fpath).replace(/\\\\/g, '/');
+          return `/public/${safePath}${suffix}`;
+        }
+        return fid ? `/media/gallery/${fid}${suffix}` : '#';
       },
       asset: (assetPath) => {
         try { return assetUrl(assetPath); } catch (_) { return assetPath || ''; }
