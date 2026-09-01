@@ -40,7 +40,7 @@
     return Number.isFinite(n) ? n : fallback;
   }
   // Permitir ajustar via atributos ou query (?circle-cx=, ?circle-cy=, ?circle-r=)
-  const circleCxRatio = readNumberPref('data-circle-cx', 0.52);
+  const circleCxRatio = readNumberPref('data-circle-cx', 0.80);
   const circleCyRatio = readNumberPref('data-circle-cy', 0.50);
   const circleRadiusRatio = readNumberPref('data-circle-r', 0.31);
   // Overscan (pode vir via atributo ou query string ?overscan=1.0)
