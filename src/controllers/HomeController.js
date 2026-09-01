@@ -13,7 +13,7 @@ module.exports = {
       organizer: 'Alcântara Pedal Bike',
       instagram: 'alcantarapedalbike',
       instagramUrl: process.env.SOCIAL_INSTAGRAM || 'https://instagram.com/alcantarapedalbike',
-      whatsappGroupUrl: process.env.WHATSAPP_GROUP_URL || 'https://chat.whatsapp.com/Fqszt7Xtrcj0ragXsl9h1K?s=cl&p=i&mlu=4&amv=0',
+      whatsappGroupUrl: process.env.WHATSAPP_GROUP_URL || 'https://chat.whatsapp.com/HGkrh9pLH2Z4PYeD8FG89P?s=cl&p=i&mlu=4',
       contacts: [
         { phone: '98 991267057', name: 'Alexandre Manzan' },
         { phone: '98 984375290', name: 'Way' },

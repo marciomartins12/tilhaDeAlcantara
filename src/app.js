@@ -288,7 +288,7 @@ app.use((req, res, next) => {
 
 // Locals
 app.use((req, res, next) => {
-  const defaultWaGroup = 'https://chat.whatsapp.com/Fqszt7Xtrcj0ragXsl9h1K?s=cl&p=i&mlu=4&amv=0';
+  const defaultWaGroup = 'https://chat.whatsapp.com/HGkrh9pLH2Z4PYeD8FG89P?s=cl&p=i&mlu=4';
   const whatsappGroupUrl = String(process.env.WHATSAPP_GROUP_URL || defaultWaGroup).trim();
   res.locals.whatsappGroupUrl = whatsappGroupUrl;
   res.locals.year = new Date().getFullYear();
