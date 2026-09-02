@@ -42,6 +42,11 @@ function computeAssetVersion(assetPath) {
   }
 }
 const isDev = String(process.env.NODE_ENV || 'development').toLowerCase().startsWith('dev');
+const buildVersion = (() => {
+  const seed = `${process.pid}-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+  return crypto.createHash('sha1').update(seed).digest('hex').slice(0, 10);
+})();
+console.log(`[Build] buildVersion = ${buildVersion} (muda a cada restart do PM2)`);
 const _assetCache = new Map();
 function assetVersion(assetPath) {
   if (isDev) {
@@ -58,8 +63,8 @@ function assetUrl(assetPath) {
   if (!clean || clean.startsWith('http://') || clean.startsWith('https://') || clean.startsWith('//') || clean.startsWith('data:')) return clean;
   const sep = clean.includes('?') ? '&' : '?';
   const base = clean.startsWith('/') ? clean : `/${clean}`;
-  const ver = assetVersion(clean.replace(/^\/+/, ''));
-  return `${base}${sep}v=${ver}`;
+  const fileVer = assetVersion(clean.replace(/^\/+/, ''));
+  return `${base}${sep}v=${buildVersion}${sep}fv=${fileVer}`;
 }
 
 // Initialize Express
@@ -137,14 +142,12 @@ app.use((req, res, next) => {
     || pathLower.startsWith('/galeria')
     || pathLower === '/';
   if (isHtml) {
-    if (isDev) {
-      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, post-check=0, pre-check=0');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-    } else {
-      // Produção: HTML com cache muito curto (1 minuto + revalidação)
-      res.setHeader('Cache-Control', 'no-cache, private, max-age=60, must-revalidate, stale-while-revalidate=60');
-    }
+    // Produção também com NO-STORE: nada de cache persistente em disco.
+    // Usuários não precisam mais apagar dados do navegador.
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, post-check=0, pre-check=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
   }
   next();
 });
@@ -291,6 +294,7 @@ app.use((req, res, next) => {
   const defaultWaGroup = 'https://chat.whatsapp.com/HGkrh9pLH2Z4PYeD8FG89P?s=cl&p=i&mlu=4';
   const whatsappGroupUrl = String(process.env.WHATSAPP_GROUP_URL || defaultWaGroup).trim();
   res.locals.whatsappGroupUrl = whatsappGroupUrl;
+  res.locals.buildVersion = buildVersion;
   res.locals.year = new Date().getFullYear();
   res.locals.footer = {
     brandTitle: process.env.SITE_TITLE,

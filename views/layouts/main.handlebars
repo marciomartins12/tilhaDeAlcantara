@@ -17,23 +17,54 @@
     <!-- Preload textura + peixe para mobile pintar mais rápido (LCP / first paint) -->
     <link rel="preload" as="image" fetchpriority="high" href="{{asset '/public/img/fundoMato.webp'}}" type="image/webp" />
     <link rel="preload" as="image" fetchpriority="high" href="{{asset '/public/img/peixefundo.webp'}}" type="image/webp" />
-    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
+    <meta name="robots" content="noarchive" />
     <script>
-      try {
-        if (navigator && navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
-          (async () => {
+      (function () {
+        try {
+          const CUR = "{{buildVersion}}";
+          const KEY = "__site_build_version__";
+          const last = window.localStorage ? localStorage.getItem(KEY) : null;
+          if (last && last !== CUR) {
             try {
-              const regs = await navigator.serviceWorker.getRegistrations();
-              for (const r of regs) { await r.unregister(); }
+              if (window.caches && caches.keys && caches.delete) {
+                caches.keys().then(function (keys) {
+                  return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+                }).catch(function () {});
+              }
             } catch (_) {}
-          })();
-        }
-      } catch (_) {}
+            try {
+              if (window.indexedDB && indexedDB.databases) {
+                indexedDB.databases().then(function (dbs) {
+                  for (const d of dbs) { try { indexedDB.deleteDatabase(d.name); } catch (_) {} }
+                }).catch(function () {});
+              }
+            } catch (_) {}
+            try { if (window.localStorage) localStorage.clear(); } catch (_) {}
+            try { if (window.sessionStorage) sessionStorage.clear(); } catch (_) {}
+            if (window.performance && performance.navigation && performance.navigation.type === 1) {
+              // já é reload, não fazer loop
+            } else {
+              window.location.reload(true);
+              return;
+            }
+          }
+          if (window.localStorage) { try { localStorage.setItem(KEY, CUR); } catch (_) {} }
+        } catch (_) {}
+        try {
+          if (navigator && navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+            (async () => {
+              try {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                for (const r of regs) { try { await r.unregister(); } catch (_) {} }
+              } catch (_) {}
+            })();
+          }
+        } catch (_) {}
+      })();
     </script>
-    <!-- Cleanup any legacy AppCache -->
-    <meta name="manifest" content="" />
 
     <!-- Detecção INLINE de WebP (antes de carregar CSS). Adiciona .webp ou .no-webp
          no <html> para o :root saber qual textura usar — resolve o problema de textura
