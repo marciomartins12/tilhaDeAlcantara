@@ -262,6 +262,8 @@
     const preview = document.getElementById('mapVideoPreview');
     if (!preview) return;
     const playBtn = preview.querySelector('.video-preview__play');
+    const BUILD = "{{buildVersion}}";
+    const SESSION_RAND = Math.random().toString(36).slice(2, 12);
     playBtn?.addEventListener('click', function () {
       const video = document.createElement('video');
       video.className = 'details__map-image';
@@ -269,11 +271,15 @@
       video.autoplay = true;
       video.playsInline = true;
       video.preload = 'none';
+      video.setAttribute('playsinline', '');
+      video.setAttribute('webkit-playsinline', '');
       const source = document.createElement('source');
-      source.src = '/public/img/videoRota.mp4';
+      const RAND = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      source.src = `/public/img/videoRota.mp4?v=${BUILD}&fv=${SESSION_RAND}&nocache=${RAND}`;
       source.type = 'video/mp4';
       video.appendChild(source);
       preview.replaceWith(video);
+      video.load && video.load();
       video.play?.().catch(() => { });
     });
   })();

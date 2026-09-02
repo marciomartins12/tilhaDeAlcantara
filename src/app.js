@@ -97,16 +97,26 @@ function setCacheHeadersForStatic(res, filePath, stat) {
     res.setHeader('Expires', '0');
     return;
   }
-  // Verificar se está dentro de /public/uploads/ (avatars, galeria em disco) — cache curto
   const normalized = filePath.replace(/\\/g, '/');
   const isInUploads = normalized.includes('/public/uploads/') || normalized.includes('\\public\\uploads\\') || normalized.includes('/uploads/avatars/') || normalized.includes('/uploads/gallery/');
+  // VÍDEOS e ÁUDIOS: SEMPRE CACHE ZERO. Celulares tem cache de mídia extremamente agressivo
+  // (mesmo trocando o arquivo no disco com mesmo nome, eles mostram o velho por semanas)
+  const isMediaVideo = ['.mp4', '.webm', '.mov', '.m4v', '.avi', '.mkv', '.3gp', '.wmv', '.mpeg', '.mpg', '.ogv', '.mp3', '.ogg', '.wav', '.aac'].includes(ext);
+  if (isMediaVideo) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, private, must-revalidate, proxy-revalidate, max-age=0, post-check=0, pre-check=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+    res.setHeader('X-Accel-Expires', '0');
+    res.removeHeader('ETag');
+    res.removeHeader('Last-Modified');
+    return;
+  }
   if (isInUploads) {
-    // Cache CURTO: até 1 hora, e sempre revalidar com servidor para pegar atualizações
     res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate, stale-while-revalidate=60');
     return;
   }
-  if (['.webp', '.jpg', '.jpeg', '.png', '.gif', '.svg', '.mp4', '.webm', '.woff2', '.woff', '.ttf', '.otf'].includes(ext)) {
-    // Arquivo imutável: possui ?v=HASH via helper {{asset}}
+  if (['.webp', '.jpg', '.jpeg', '.png', '.gif', '.svg', '.woff2', '.woff', '.ttf', '.otf'].includes(ext)) {
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
   } else if (['.css', '.js', '.json'].includes(ext)) {
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable, must-revalidate');
