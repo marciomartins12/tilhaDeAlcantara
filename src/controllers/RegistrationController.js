@@ -903,6 +903,71 @@ async function lookupByCpf(req, res) {
 
 async function repairBrokenPaidRegistrations() {
   const { Op } = require('sequelize');
+  const report = {
+    totalBrokenPaid: 0, fixed: 0, stillBroken: 0,
+    fixedOrder: 0, fixedConfirmation: 0,
+    clearedGuestsWithPlate: 0, clearedZeroPlates: 0,
+    duplicatePlates: [], gaps: [], plateMap: {}, errors: [],
+  };
+
+  try {
+    const [allGuestsWithPlate] = await sequelize.query(
+      "SELECT id, name, cpf, paidOrder, type, paymentStatus FROM registrations WHERE type <> 'ATLETA' AND paidOrder IS NOT NULL ORDER BY paidOrder"
+    );
+    report.clearedGuestsWithPlate = allGuestsWithPlate?.length || 0;
+    for (const r of allGuestsWithPlate || []) {
+      await sequelize.query(
+        "UPDATE registrations SET paidOrder = NULL, updatedAt = NOW() WHERE id = ?",
+        { replacements: [r.id] }
+      );
+    }
+  } catch (e) {
+    console.warn('[Repair] falha ao limpar paidOrder de ACOMPANHANTES:', e?.message || String(e));
+    report.errors.push({ phase: 'clear-guests-plate', reason: e?.message || String(e) });
+  }
+
+  try {
+    const [zeroPlates] = await sequelize.query(
+      "SELECT id, name, cpf, paidOrder, type, paymentStatus FROM registrations WHERE type = 'ATLETA' AND (paidOrder = 0 OR paidOrder < 1) ORDER BY id"
+    );
+    report.clearedZeroPlates = zeroPlates?.length || 0;
+    for (const r of zeroPlates || []) {
+      await sequelize.query(
+        "UPDATE registrations SET paidOrder = NULL, updatedAt = NOW() WHERE id = ?",
+        { replacements: [r.id] }
+      );
+    }
+  } catch (e) {
+    console.warn('[Repair] falha ao limpar paidOrder=0:', e?.message || String(e));
+    report.errors.push({ phase: 'clear-zero-plate', reason: e?.message || String(e) });
+  }
+
+  try {
+    const [dupes] = await sequelize.query(
+      "SELECT paidOrder, COUNT(*) AS n, GROUP_CONCAT(id) AS ids FROM registrations WHERE paidOrder IS NOT NULL GROUP BY paidOrder HAVING COUNT(*) > 1"
+    );
+    report.duplicatePlates = dupes || [];
+  } catch (e) {
+    console.warn('[Repair] falha ao detectar duplicatas:', e?.message || String(e));
+  }
+
+  try {
+    const [athletePlates] = await sequelize.query(
+      "SELECT id, name, cpf, paidOrder, paymentStatus, paymentConfirmedBy, type FROM registrations WHERE type = 'ATLETA' AND paidOrder IS NOT NULL ORDER BY paidOrder"
+    );
+    const used = new Set();
+    for (const r of athletePlates || []) { used.add(Number(r.paidOrder)); report.plateMap[r.paidOrder] = r; }
+    const maxP = Math.max(0, ...Array.from(used));
+    const gaps = [];
+    for (let n = 1; n <= maxP + 5; n++) {
+      if (!used.has(n)) gaps.push(n);
+      if (gaps.length >= 50) break;
+    }
+    report.gaps = gaps;
+  } catch (e) {
+    console.warn('[Repair] falha ao mapear placas:', e?.message || String(e));
+  }
+
   const broken = await Registration.findAll({
     where: {
       paymentStatus: 'paid',
@@ -915,7 +980,7 @@ async function repairBrokenPaidRegistrations() {
     },
     order: [['createdAt', 'ASC']]
   });
-  const report = { total: broken.length, fixed: 0, stillBroken: 0, fixedOrder: 0, fixedConfirmation: 0, errors: [] };
+  report.totalBrokenPaid = broken.length;
   for (const reg of broken) {
     try {
       const p = reg.get({ plain: true });
@@ -935,7 +1000,12 @@ async function repairBrokenPaidRegistrations() {
       if (!hadConfirm) {
         reg.paymentConfirmedAt = overrides.paymentConfirmedAt;
         reg.paymentConfirmedBy = overrides.paymentConfirmedBy;
-        await reg.save();
+        await reg.save().catch(async () => {
+          await sequelize.query(
+            "UPDATE registrations SET paymentConfirmedAt = ?, paymentConfirmedBy = ?, updatedAt = NOW() WHERE id = ?",
+            { replacements: [overrides.paymentConfirmedAt, overrides.paymentConfirmedBy, p.id] }
+          );
+        });
         report.fixedConfirmation++;
       }
       const result = await assignPaidOrderIfNeeded(reg.id, overrides);
@@ -967,4 +1037,91 @@ async function repairBrokenPaidRegistrations() {
   return report;
 }
 
-module.exports = { formPage, submit, submitWithUpload, paymentPage, webhook, paymentStatus, avatarPage, uploadAvatar, cardPage, avatarData, cardData, cardDownload, cardDownloadCanvas, lookupByCpf, composeCard, assignPaidOrderIfNeeded, parseBirthDate, repairBrokenPaidRegistrations };
+async function diagnosePlatesAndPayments() {
+  const diag = {
+    generatedAt: new Date().toISOString(),
+    totalInscricoes: 0, atletas: 0, acompanhantes: 0,
+    pagos: 0, pendentes: 0,
+    atletasPagos: 0, atletasPagosComPlaca: 0, atletasPagosSemPlaca: [],
+    pagosSemConfirmacao: [],
+    acompanhantesComPlaca: [],
+    zeroOuMenosPlates: [],
+    duplicatas: [],
+    lacunas: [],
+    minPlaca: 0, maxPlaca: 0,
+    ultimaPlacaValida: null,
+    proximas50Livre: [],
+    tabela: [],
+  };
+  try {
+    const [[c]] = await sequelize.query("SELECT COUNT(*) AS n FROM registrations");
+    diag.totalInscricoes = Number(c?.n || 0);
+    const [[cA]] = await sequelize.query("SELECT COUNT(*) AS n FROM registrations WHERE type='ATLETA'");
+    diag.atletas = Number(cA?.n || 0);
+    const [[cG]] = await sequelize.query("SELECT COUNT(*) AS n FROM registrations WHERE type='ACOMPANHANTE'");
+    diag.acompanhantes = Number(cG?.n || 0);
+    const [[cP]] = await sequelize.query("SELECT COUNT(*) AS n FROM registrations WHERE paymentStatus='paid'");
+    diag.pagos = Number(cP?.n || 0);
+    const [[cPe]] = await sequelize.query("SELECT COUNT(*) AS n FROM registrations WHERE paymentStatus='pending'");
+    diag.pendentes = Number(cPe?.n || 0);
+    const [[cAP]] = await sequelize.query("SELECT COUNT(*) AS n FROM registrations WHERE type='ATLETA' AND paymentStatus='paid'");
+    diag.atletasPagos = Number(cAP?.n || 0);
+    const [[cAPP]] = await sequelize.query("SELECT COUNT(*) AS n FROM registrations WHERE type='ATLETA' AND paymentStatus='paid' AND paidOrder IS NOT NULL AND paidOrder > 0");
+    diag.atletasPagosComPlaca = Number(cAPP?.n || 0);
+
+    const [noPlate] = await sequelize.query(
+      "SELECT id, name, cpf, paidOrder, paymentConfirmedBy, mpPaymentId, createdAt, updatedAt FROM registrations WHERE type='ATLETA' AND paymentStatus='paid' AND (paidOrder IS NULL OR paidOrder < 1) ORDER BY createdAt ASC"
+    );
+    diag.atletasPagosSemPlaca = noPlate || [];
+
+    const [noConf] = await sequelize.query(
+      "SELECT id, name, type, cpf, paidOrder, paymentConfirmedBy, paymentConfirmedAt, paymentStatus FROM registrations WHERE paymentStatus='paid' AND (paymentConfirmedBy IS NULL OR paymentConfirmedAt IS NULL) ORDER BY createdAt ASC"
+    );
+    diag.pagosSemConfirmacao = noConf || [];
+
+    const [gpl] = await sequelize.query(
+      "SELECT id, name, cpf, paidOrder, type FROM registrations WHERE type <> 'ATLETA' AND paidOrder IS NOT NULL ORDER BY paidOrder"
+    );
+    diag.acompanhantesComPlaca = gpl || [];
+
+    const [zpl] = await sequelize.query(
+      "SELECT id, name, cpf, paidOrder, type, paymentStatus FROM registrations WHERE paidOrder IS NOT NULL AND paidOrder < 1 ORDER BY paidOrder"
+    );
+    diag.zeroOuMenosPlates = zpl || [];
+
+    const [dup] = await sequelize.query(
+      "SELECT paidOrder, COUNT(*) AS n, GROUP_CONCAT(id ORDER BY id) AS ids, GROUP_CONCAT(CONCAT_WS(':',id,CASE type WHEN 'ATLETA' THEN 'A' ELSE 'X' END,name) ORDER BY id SEPARATOR ' | ') AS who FROM registrations WHERE paidOrder IS NOT NULL GROUP BY paidOrder HAVING COUNT(*) > 1 ORDER BY paidOrder"
+    );
+    diag.duplicatas = dup || [];
+
+    const [todos] = await sequelize.query(
+      "SELECT id, name, cpf, paidOrder, type, paymentStatus, paymentConfirmedBy FROM registrations WHERE paidOrder IS NOT NULL AND paidOrder > 0 ORDER BY paidOrder ASC"
+    );
+    diag.tabela = todos || [];
+    const used = new Set((todos || []).map(r => Number(r.paidOrder)));
+    const usedArr = Array.from(used).sort((a, b) => a - b);
+    diag.minPlaca = usedArr[0] || 0;
+    diag.maxPlaca = usedArr[usedArr.length - 1] || 0;
+
+    let last = 0;
+    for (const n of usedArr) {
+      if (n - last > 1) {
+        for (let g = last + 1; g < n; g++) diag.lacunas.push(g);
+      }
+      last = n;
+    }
+    diag.lacunas = diag.lacunas.slice(0, 100);
+
+    for (let scan = Math.max(1, diag.maxPlaca + 1), found = 0; found < 50; scan++) {
+      if (!used.has(scan)) { diag.proximas50Livre.push(scan); found++; }
+    }
+
+    diag.ultimaPlacaValida = usedArr.length ? usedArr[usedArr.length - 1] : 0;
+  } catch (e) {
+    console.error('[Diagnostico] falha:', e);
+    diag.error = e?.message || String(e);
+  }
+  return diag;
+}
+
+module.exports = { formPage, submit, submitWithUpload, paymentPage, webhook, paymentStatus, avatarPage, uploadAvatar, cardPage, avatarData, cardData, cardDownload, cardDownloadCanvas, lookupByCpf, composeCard, assignPaidOrderIfNeeded, parseBirthDate, repairBrokenPaidRegistrations, diagnosePlatesAndPayments };

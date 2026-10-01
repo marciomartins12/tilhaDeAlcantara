@@ -117,13 +117,18 @@
       <strong>Use esta ferramenta se:</strong> pagamentos marcados como "Pago" não mostram "por Mercado Pago" e/ou atletas não receberam número de placa (mostrando 000).<br>
       Vará todos os registros <code>paymentStatus='paid'</code> e preenche automaticamente <code>paymentConfirmedBy/At</code> e atribui placas (paidOrder) aos atletas que estão sem.
     </p>
-    <form method="POST" action="/admin/pagamentos/reparar" class="form" style="margin-top:10px;">
-      <button type="submit" class="btn btn--primary" onclick="return confirm('Essa ação irá:\n1. Atribuir \"Mercado Pago\" como confirmador de todos os pagamentos sem essa informação;\n2. Atribuir números de placa para todos os atletas pagos que estão sem;\n3. Usar data do Mercado Pago (quando disponível) ou data da atualização.\n\nTem certeza que deseja continuar?')" style="height: 38px; display:flex; align-items:center;">
-        Executar Reparo de Pagamentos
-      </button>
-    </form>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <form method="POST" action="/admin/pagamentos/reparar" class="form" style="margin:10px 0 0 0;">
+        <button type="submit" class="btn btn--primary" onclick="return confirm('Essa ação irá:\n1. Limpar números de placa INDEVIDOS de ACOMPANHANTES;\n2. Atribuir \"Mercado Pago\" como confirmador de todos os pagamentos sem essa informação;\n3. Atribuir números de placa para todos os atletas pagos que estão sem;\n4. Usar data do Mercado Pago (quando disponível) ou data da atualização.\n\nTem certeza que deseja continuar?')" style="height: 38px; display:flex; align-items:center;">
+          Executar Reparo de Pagamentos
+        </button>
+      </form>
+      <a href="/admin/pagamentos/diagnostico" class="btn btn--secondary" style="text-decoration:none; height: 38px; display:inline-flex; align-items:center; background:#334155; color:#fff; padding:0 14px; border-radius:8px; font-weight:bold; border:1px solid #475569; margin-top:10px;">
+        🔍 Ver Diagnóstico Detalhado
+      </a>
+    </div>
     <div style="margin-top:12px; padding:10px; background:rgba(255,107,107,0.08); border-radius:8px; font-size:0.85rem; color:rgba(255,255,255,0.75);">
-      <strong>Quando usar:</strong> Após um pico de inscrições onde o webhook ou polling teve falhas transitórias (ex: deadlock de banco, timeout no MP). Execute primeiro e depois confira a lista — a mensagem de flash mostrará quantos foram reparados.
+      <strong>Dica:</strong> Se há lacunas na numeração, primeiro execute o <em>Reparo</em>, depois abra o <em>Diagnóstico Detalhado</em> para confirmar quais números estão realmente vazios antes de usar a correção de Gap abaixo.
     </div>
   </div>
 

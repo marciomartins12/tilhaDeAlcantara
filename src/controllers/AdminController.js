@@ -2,7 +2,7 @@ const bcrypt = require('bcrypt');
 const { sequelize } = require('../models');
 const Registration = require('../models/Registration');
 const AdminUser = require('../models/AdminUser');
-const { composeCard, assignPaidOrderIfNeeded, parseBirthDate, repairBrokenPaidRegistrations } = require('./RegistrationController');
+const { composeCard, assignPaidOrderIfNeeded, parseBirthDate, repairBrokenPaidRegistrations, diagnosePlatesAndPayments } = require('./RegistrationController');
 
 function isAdmin(req) {
   return !!req.session?.admin && req.session.admin.role === 'ADMIN';
@@ -885,10 +885,17 @@ module.exports = {
       if (!isAdmin(req)) return res.redirect('/admin');
       const report = await repairBrokenPaidRegistrations();
       const parts = [];
-      parts.push(`Total com problema: ${report.total}`);
+      parts.push(`Total com problema: ${report.totalBrokenPaid ?? report.total}`);
       parts.push(`Corrigidos com sucesso: ${report.fixed}`);
+      if (Number(report.clearedGuestsWithPlate) > 0) parts.push(`Acompanhantes com placa indevida limpos: ${report.clearedGuestsWithPlate}`);
+      if (Number(report.clearedZeroPlates) > 0) parts.push(`Placas zeradas/inválidas limpas: ${report.clearedZeroPlates}`);
       if (report.fixedConfirmation > 0) parts.push(`Confirmações (Mercado Pago) restauradas: ${report.fixedConfirmation}`);
       if (report.fixedOrder > 0) parts.push(`Placas atribuídas: ${report.fixedOrder}`);
+      if (report.duplicatePlates && report.duplicatePlates.length > 0) parts.push(`Atenção: ainda há ${report.duplicatePlates.length} placas DUPLICADAS (resolver manual)`);
+      if (report.gaps && report.gaps.length > 0) {
+        const g = report.gaps.slice(0, 10).map(n => String(n).padStart(3, '0')).join(', ');
+        parts.push(`Lacunas detectadas: ${g}${report.gaps.length > 10 ? '...' : ''}`);
+      }
       if (report.stillBroken > 0) parts.push(`Ainda com problema: ${report.stillBroken}`);
       let detailMsg = parts.join(' | ');
       if (report.errors && report.errors.length > 0) {
@@ -896,12 +903,115 @@ module.exports = {
         detailMsg += ` — Erros: ${topErrs}`;
         console.warn('[RepairPagamentos] relatório completo de erros:', JSON.stringify(report.errors, null, 2));
       }
-      const type = report.stillBroken === 0 ? 'success' : 'error';
+      const hasDuplicates = report.duplicatePlates && report.duplicatePlates.length > 0;
+      const type = report.stillBroken === 0 && !hasDuplicates ? 'success' : 'error';
       req.session.flash = { type, message: `Reparo de pagamentos concluído. ${detailMsg}` };
-      return res.redirect('/admin/inscricoes');
+      return res.redirect('/admin/pagamentos/diagnostico');
     } catch (e) {
       console.error('Erro no reparo de pagamentos:', e);
       req.session.flash = { type: 'error', message: 'Falha ao executar reparo de pagamentos. ' + (e?.message || String(e)) };
+      return res.redirect('/admin/inscricoes');
+    }
+  },
+  registrationsDiagnose: async (req, res) => {
+    try {
+      if (!isAdmin(req)) return res.redirect('/admin');
+      const d = await diagnosePlatesAndPayments();
+      const pad = (n) => String(n).padStart(3, '0');
+      const esc = (s) => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      const rowsTable = (d.tabela || []).slice(0, 500).map(r => {
+        const badgeType = r.type === 'ATLETA' ? 'Ciclista' : 'Acomp';
+        const badgeStatus = r.paymentStatus === 'paid' ? 'Pago' : 'Pend';
+        const who = esc(`${r.id}: ${r.name} (${r.cpf})`);
+        const conf = esc(String(r.paymentConfirmedBy || ''));
+        return `<tr><td style="text-align:center;font-family:monospace;font-size:16px;font-weight:bold;">${pad(r.paidOrder)}</td><td>${who}</td><td>${badgeType}</td><td>${badgeStatus}</td><td>${conf || '<em style="color:#ff8080">SEM CONFIRMAÇÃO</em>'}</td></tr>`;
+      }).join('');
+      const semPlaca = (d.atletasPagosSemPlaca || []).map(r => `<li>id=${r.id} — ${esc(r.name)} (${esc(r.cpf)}) — mpPaymentId=${esc(r.mpPaymentId || 'nulo')}</li>`).join('') || '<li style="color:#7fff9f">Nenhum. Todos os atletas pagos tem placa.</li>';
+      const semConf = (d.pagosSemConfirmacao || []).map(r => `<li>[${r.type}] placa=${(r.paidOrder||'—')} id=${r.id} — ${esc(r.name)} (${esc(r.cpf)})</li>`).join('') || '<li style="color:#7fff9f">Nenhum. Todos os pagos tem confirmação.</li>';
+      const guestPlates = (d.acompanhantesComPlaca || []).map(r => `<li>placa=${pad(r.paidOrder)} id=${r.id} — ${esc(r.name)} (${esc(r.cpf)})</li>`).join('') || '<li style="color:#7fff9f">Nenhum acompanhante indevidamente com placa.</li>';
+      const zeroPlates = (d.zeroOuMenosPlates || []).map(r => `<li>paidOrder=${r.paidOrder} [${r.type}] id=${r.id} — ${esc(r.name)} (${esc(r.cpf)})</li>`).join('') || '<li style="color:#7fff9f">Nenhuma placa zero/negativa.</li>';
+      const dups = (d.duplicatas || []).map(r => `<li><strong>Placa ${pad(r.paidOrder)}</strong> (${r.n} vezes): ${esc(r.who || r.ids)}</li>`).join('') || '<li style="color:#7fff9f">Nenhuma placa duplicada.</li>';
+      const lacs = (d.lacunas || []).map(n => pad(n)).join(', ') || '<em style="color:#7fff9f">Nenhuma lacuna — numeração perfeita.</em>';
+      const livres = (d.proximas50Livre || []).map(n => pad(n)).join(', ');
+      const sem = d.atletasPagos - d.atletasPagosComPlaca;
+      const qtdGuestBug = d.acompanhantesComPlaca ? d.acompanhantesComPlaca.length : 0;
+      const qtdDup = d.duplicatas ? d.duplicatas.length : 0;
+      const qtdLac = d.lacunas ? d.lacunas.length : 0;
+      const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Diagnóstico de Placas e Pagamentos</title>
+        <style>
+          body{font-family:Arial,Helvetica,sans-serif;background:#0f172a;color:#f1f5f9;margin:0;padding:24px;}
+          .wrap{max-width:1200px;margin:0 auto;}
+          h1{margin-top:0;}
+          h2{margin-top:28px;border-bottom:1px solid #334155;padding-bottom:6px;}
+          .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:16px 0 24px;}
+          .kpi{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:14px;}
+          .kpi .label{font-size:0.8rem;color:#94a3b8;margin-bottom:4px;}
+          .kpi .value{font-size:1.8rem;font-weight:bold;color:#fff;}
+          .kpi.danger .value{color:#ff6b6b;}
+          .kpi.warn .value{color:#ffcf5c;}
+          .kpi.ok .value{color:#7fff9f;}
+          table{width:100%;border-collapse:collapse;margin-top:10px;background:#111827;}
+          th,td{border:1px solid #374151;padding:7px 10px;text-align:left;font-size:0.92rem;}
+          th{background:#1f2937;color:#e5e7eb;text-align:center;}
+          ul.problems{background:#111827;border:1px solid #374151;border-radius:8px;padding:14px 14px 14px 32px;line-height:1.55em;}
+          ul.problems li{margin:3px 0;}
+          .btn{display:inline-block;background:#0e5af0;color:#fff;text-decoration:none;padding:10px 14px;border-radius:8px;font-weight:bold;border:none;cursor:pointer;}
+          .btn.warn{background:#f59e0b;}
+          .btns{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0;}
+          code{background:#1f2937;padding:2px 6px;border-radius:4px;color:#a5d8ff;}
+          small{color:#94a3b8;}
+        </style>
+      </head><body><div class="wrap">
+        <h1>🔍 Diagnóstico de Placas e Pagamentos</h1>
+        <small>Gerado em ${new Date(d.generatedAt).toLocaleString('pt-BR')}</small>
+        <div class="btns">
+          <a class="btn" href="/admin/inscricoes">← Voltar para Inscrições</a>
+          <form method="POST" action="/admin/pagamentos/reparar" style="display:inline;">
+            <button class="btn warn" onclick="return confirm('Isso irá limpar placas de ACOMPANHANTES, resetar placas inválidas (0 / negativas), atribuir \\\"Mercado Pago\\\" e números de placa aos atletas pagos que estão sem. Continuar?')">🛠️ Executar Reparo Agora</button>
+          </form>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><div class="label">Total de inscrições</div><div class="value">${d.totalInscricoes}</div></div>
+          <div class="kpi"><div class="label">Atletas</div><div class="value">${d.atletas}</div></div>
+          <div class="kpi"><div class="label">Acompanhantes</div><div class="value">${d.acompanhantes}</div></div>
+          <div class="kpi ok"><div class="label">Inscrições pagas</div><div class="value">${d.pagos}</div></div>
+          <div class="kpi warn"><div class="label">Inscrições pendentes</div><div class="value">${d.pendentes}</div></div>
+          <div class="kpi ok"><div class="label">Atletas pagos</div><div class="value">${d.atletasPagos}</div></div>
+          <div class="kpi ok"><div class="label">Atletas pagos com placa válida</div><div class="value">${d.atletasPagosComPlaca}</div></div>
+          <div class="kpi danger"><div class="label">Atletas pagos SEM PLACA</div><div class="value">${sem}</div></div>
+          <div class="kpi ${qtdGuestBug ? 'danger' : 'ok'}"><div class="label">Acompanhantes com placa (BUG)</div><div class="value">${qtdGuestBug}</div></div>
+          <div class="kpi ${qtdDup ? 'danger' : 'ok'}"><div class="label">Placas duplicadas</div><div class="value">${qtdDup}</div></div>
+          <div class="kpi ${qtdLac ? 'warn' : 'ok'}"><div class="label">Lacunas (buracos)</div><div class="value">${qtdLac}</div></div>
+          <div class="kpi"><div class="label">Placa máxima usada</div><div class="value">${pad(d.maxPlaca)}</div></div>
+        </div>
+        ${d.error ? `<div style="background:#7f1d1d;border:1px solid #ef4444;padding:14px;border-radius:8px;color:#fecaca;">ERRO NO DIAGNÓSTICO: ${esc(d.error)}</div>` : ''}
+        <h2>🚨 Problemas Detectados</h2>
+        <h3>Atletas pagos SEM número de placa (são eles que aparecem como 000):</h3>
+        <ul class="problems">${semPlaca}</ul>
+        <h3>Pagos SEM informação de confirmação (sem "Mercado Pago" ou admin):</h3>
+        <ul class="problems">${semConf}</ul>
+        <h3>Acompanhantes que tem placa indevida (ocupam UNIQUE index):</h3>
+        <ul class="problems">${guestPlates}</ul>
+        <h3>Placas inválidas (zero ou negativas):</h3>
+        <ul class="problems">${zeroPlates}</ul>
+        <h3>Placas DUPLICADAS (2 inscrições com mesmo número):</h3>
+        <ul class="problems">${dups}</ul>
+        <h2>📊 Numeração</h2>
+        <h3>Lacunas (buracos) na numeração (até 100 primeiros):</h3>
+        <div class="problems" style="padding:14px;font-family:monospace;font-size:1.05rem;letter-spacing:1px;">${lacs}</div>
+        <h3>Próximas 50 placas LIVRES após a máxima atual:</h3>
+        <div class="problems" style="padding:14px;font-family:monospace;font-size:1.05rem;letter-spacing:1px;">${livres}</div>
+        <h2>🧾 Tabela de TODAS as inscrições com placa (ordenado por placa, até 500)</h2>
+        <table>
+          <thead><tr><th>Placa</th><th>Inscrição</th><th>Tipo</th><th>Status</th><th>Confirmado por</th></tr></thead>
+          <tbody>${rowsTable || '<tr><td colspan="5" style="text-align:center;color:#94a3b8;">Nenhuma inscrição com placa.</td></tr>'}</tbody>
+        </table>
+      </div></body></html>`;
+      res.type('text/html; charset=utf-8');
+      return res.send(html);
+    } catch (e) {
+      console.error('Erro no diagnóstico de pagamentos/placas:', e);
+      req.session.flash = { type: 'error', message: 'Falha ao executar diagnóstico. ' + (e?.message || String(e)) };
       return res.redirect('/admin/inscricoes');
     }
   },
