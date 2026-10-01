@@ -7,71 +7,127 @@ const { sequelize } = require('../models');
 const Registration = require('../models/Registration');
 const { createPixPayment, getPaymentById } = require('../services/mercadoPago');
 
-const MAX_PAIDORDER_RETRIES = 5;
+const MAX_PAIDORDER_RETRIES = 12;
 
 async function assignPaidOrderIfNeeded(regOrId, overrides) {
   let lastErr = null;
+  const regId = typeof regOrId === 'object' ? (regOrId.id ?? regOrId.get?.('id')) : Number(regOrId);
+  if (!Number.isFinite(regId)) {
+    console.warn('assignPaidOrderIfNeeded: ID inválido:', regOrId);
+    return null;
+  }
+
   for (let attempt = 1; attempt <= MAX_PAIDORDER_RETRIES; attempt++) {
     const tx = await sequelize.transaction({ isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.REPEATABLE_READ });
     try {
-      const regId = typeof regOrId === 'object' ? (regOrId.id ?? regOrId.get?.('id')) : Number(regOrId);
-      if (!Number.isFinite(regId)) throw new Error('ID de inscrição inválido para assignPaidOrderIfNeeded');
-
       const locked = await Registration.findByPk(regId, { transaction: tx, lock: tx.LOCK.UPDATE });
       if (!locked) { await tx.rollback(); return null; }
+      const p = locked.get({ plain: true });
 
-      let needsSave = false;
-      if (!locked.paymentConfirmedAt) {
-        locked.paymentConfirmedAt = (overrides && overrides.paymentConfirmedAt) || new Date();
-        needsSave = true;
-      }
-      if (!locked.paymentConfirmedBy) {
-        locked.paymentConfirmedBy = (overrides && overrides.paymentConfirmedBy) || 'Mercado Pago';
-        needsSave = true;
-      }
+      const confirmedAt = p.paymentConfirmedAt || (overrides && overrides.paymentConfirmedAt) || new Date();
+      const confirmedBy = p.paymentConfirmedBy || (overrides && overrides.paymentConfirmedBy) || 'Mercado Pago';
+      const needsConfirmationUpdate = !p.paymentConfirmedAt || !p.paymentConfirmedBy;
 
-      if (locked.type !== 'ATLETA') {
-        if (needsSave) await locked.save({ transaction: tx });
+      if (p.type !== 'ATLETA') {
+        if (needsConfirmationUpdate) {
+          await sequelize.query(
+            "UPDATE registrations SET paymentConfirmedAt = ?, paymentConfirmedBy = ?, updatedAt = NOW() WHERE id = ?",
+            { replacements: [confirmedAt, confirmedBy, regId], transaction: tx }
+          );
+        }
         await tx.commit();
+        return await Registration.findByPk(regId, { transaction: null });
+      }
+
+      const hasValidOrder = Number(p.paidOrder) > 0;
+      if (hasValidOrder && !needsConfirmationUpdate) {
+        await tx.rollback();
         return locked;
       }
-      if (locked.paidOrder && Number(locked.paidOrder) > 0) {
-        if (needsSave) await locked.save({ transaction: tx });
-        await tx.commit();
-        return locked;
+
+      let paidOrderToSet = null;
+      if (!hasValidOrder) {
+        const [[maxRow]] = await sequelize.query(
+          "SELECT COALESCE(MAX(paidOrder), 0) AS maxOrder FROM registrations WHERE type = 'ATLETA'",
+          { transaction: tx }
+        );
+        let startProbe = Number(maxRow?.maxOrder || 0) + 1;
+        if (startProbe < 1) startProbe = 1;
+        let foundFree = false;
+        let candidate = startProbe;
+        for (let scan = 0; scan < 500 && !foundFree; scan++, candidate++) {
+          const [[occ]] = await sequelize.query(
+            "SELECT COUNT(*) AS c FROM registrations WHERE paidOrder = ?",
+            { replacements: [candidate], transaction: tx }
+          );
+          if (Number(occ?.c || 0) === 0) {
+            paidOrderToSet = candidate;
+            foundFree = true;
+          }
+        }
+        if (!foundFree) {
+          throw new Error(`Não foi possível encontrar número de placa livre após 500 tentativas a partir de ${startProbe}`);
+        }
       }
 
-      const [[row]] = await sequelize.query(
-        "SELECT COALESCE(MAX(paidOrder), 0) + 1 AS nextOrder FROM registrations WHERE type = 'ATLETA' FOR UPDATE",
-        { transaction: tx }
+      const fields = [];
+      const params = [];
+      if (paidOrderToSet != null) {
+        fields.push('paidOrder = ?');
+        params.push(paidOrderToSet);
+      }
+      if (needsConfirmationUpdate) {
+        fields.push('paymentConfirmedAt = ?');
+        params.push(confirmedAt);
+        fields.push('paymentConfirmedBy = ?');
+        params.push(confirmedBy);
+      }
+      fields.push('updatedAt = NOW()');
+      params.push(regId);
+
+      const [updateResult] = await sequelize.query(
+        `UPDATE registrations SET ${fields.join(', ')} WHERE id = ?`,
+        { replacements: params, transaction: tx }
       );
-      const nextOrder = Number(row?.nextOrder || 1);
-      locked.paidOrder = nextOrder;
-      needsSave = true;
-
-      if (needsSave) await locked.save({ transaction: tx });
+      const affected = Number(updateResult?.affectedRows || updateResult?.count || 0);
+      if (affected === 0) {
+        await tx.rollback();
+        throw new Error('UPDATE retornou 0 linhas — inscrição pode ter sido removida');
+      }
       await tx.commit();
-      return locked;
+
+      const final = await Registration.findByPk(regId, { transaction: null });
+      return final;
     } catch (e) {
       try { await tx.rollback(); } catch (_) {}
+
+      try {
+        if (e instanceof Sequelize.ValidationError || (e && e.name === 'SequelizeValidationError')) {
+          const fieldList = (e.errors || []).map(er => `${er.path || '?'}=${er.value || ''}(${er.type || ''}:${er.message || ''})`).join(' | ');
+          console.warn(`[assignPaidOrder] ValidationError inesperado (tentativa ${attempt}): parent=${e.parent?.code || ''} fields=[${fieldList}] msg=${e.message}`);
+        }
+      } catch (_) {}
+
+      const errText = String((e && e.message) || e || '');
       const isConflict =
-        e instanceof Sequelize.UniqueConstraintError ||
-        e instanceof Sequelize.DeadlockError ||
-        (e.name === 'SequelizeDatabaseError' && /deadlock|lock wait timeout/i.test(e.message)) ||
-        (e.name === 'SequelizeUniqueConstraintError');
+        /duplicate/i.test(errText) ||
+        /deadlock/i.test(errText) ||
+        /lock wait timeout/i.test(errText) ||
+        /Validation error/i.test(errText) ||
+        (e && e.parent && (e.parent.code === 'ER_DUP_ENTRY' || e.parent.errno === 1062));
 
       if (isConflict && attempt < MAX_PAIDORDER_RETRIES) {
         lastErr = e;
-        const delayMs = 50 * attempt + Math.floor(Math.random() * 80);
+        const delayMs = 150 * attempt + Math.floor(Math.random() * 250);
         await new Promise((r) => setTimeout(r, delayMs));
         continue;
       }
-      console.warn(`Falha ao atribuir paidOrder (tentativa ${attempt}/${MAX_PAIDORDER_RETRIES}):`, e.message);
+      console.warn(`Falha ao atribuir paidOrder (tentativa ${attempt}/${MAX_PAIDORDER_RETRIES}):`, errText, ' | name=', e?.name || '', ' | parentCode=', e?.parent?.code || '');
       lastErr = e;
       break;
     }
   }
-  if (lastErr) console.warn('assignPaidOrderIfNeeded falhou após', MAX_PAIDORDER_RETRIES, 'tentativas:', lastErr.message);
+  if (lastErr) console.warn('assignPaidOrderIfNeeded falhou após', MAX_PAIDORDER_RETRIES, 'tentativas para id=', regId, ':', lastErr.message || String(lastErr));
   return null;
 }
 
