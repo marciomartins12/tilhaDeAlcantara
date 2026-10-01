@@ -7,6 +7,40 @@ const { sequelize } = require('../models');
 const Registration = require('../models/Registration');
 const { createPixPayment, getPaymentById } = require('../services/mercadoPago');
 
+const uploadDir = path.join(__dirname, '..', '..', 'public', 'uploads', 'avatars');
+try {
+  fs.mkdirSync(uploadDir, { recursive: true });
+} catch (_) {}
+
+async function safeSave(modelInstance) {
+  try {
+    await modelInstance.save();
+    return true;
+  } catch (e) {
+    try {
+      const id = modelInstance.id;
+      if (!id) return false;
+      const p = modelInstance.get({ plain: true });
+      const changedKeys = Object.keys(p).filter((k) => {
+        if (k === 'id' || k === 'createdAt') return false;
+        const v = p[k];
+        if (v === undefined || v === null) return false;
+        if (typeof v === 'object' && !Buffer.isBuffer(v)) return false;
+        return true;
+      });
+      if (changedKeys.length === 0) return true;
+      await sequelize.query(
+        `UPDATE registrations SET ${changedKeys.map((k) => `${k} = ?`).join(', ')}, updatedAt = NOW() WHERE id = ?`,
+        { replacements: [...changedKeys.map((k) => p[k]), id] }
+      );
+      return true;
+    } catch (e2) {
+      console.warn('[safeSave] fallback também falhou:', e2?.message || String(e2), ' | erro original:', e?.message || String(e));
+      return false;
+    }
+  }
+}
+
 const MAX_PAIDORDER_RETRIES = 12;
 
 async function assignPaidOrderIfNeeded(regOrId, overrides) {
@@ -305,7 +339,7 @@ async function submit(req, res) {
       assignIfChanged('city', city);
       assignIfChanged('phone', phone ? onlyDigits(phone) : null);
       if (parsedBirth) assignIfChanged('birthDate', parsedBirth.dateISO);
-      if (dirty) await existing.save();
+      if (dirty) await safeSave(existing);
 
       if (existing.paymentStatus === 'pending') {
         if (existing.type === 'ATLETA' && await hasReachedAthleteLimit()) {
@@ -403,7 +437,7 @@ const submitWithUpload = [uploadInline.single('avatar'), async (req, res) => {
           dirty = true;
         } catch (_) {}
       }
-      if (dirty) await existing.save();
+      if (dirty) await safeSave(existing);
 
       if (existing.paymentStatus === 'pending') {
         if (existing.type === 'ATLETA' && await hasReachedAthleteLimit()) {
@@ -488,7 +522,7 @@ async function paymentPage(req, res) {
     if (!reg.amount && reg.type) {
       try {
         reg.amount = calcAmount(reg.type);
-        await reg.save();
+        await safeSave(reg);
       } catch (e) {
         console.warn('Falha ao ajustar amount da inscrição:', e.message);
       }
@@ -504,7 +538,7 @@ async function paymentPage(req, res) {
         reg.mpQrCode = tx.qr_code || null;
         reg.mpQrCodeBase64 = tx.qr_code_base64 || null;
         reg.mpTicketUrl = tx.ticket_url || null;
-        await reg.save();
+        await safeSave(reg);
       } catch (e) {
         console.warn('Falha ao criar pagamento PIX:', e.message);
         try {
@@ -524,12 +558,12 @@ async function paymentPage(req, res) {
           reg.mpQrCode = ntx.qr_code || null;
           reg.mpQrCodeBase64 = ntx.qr_code_base64 || null;
           reg.mpTicketUrl = ntx.ticket_url || null;
-          await reg.save();
+          await safeSave(reg);
         } else {
           reg.mpQrCode = tx.qr_code || reg.mpQrCode || null;
           reg.mpQrCodeBase64 = tx.qr_code_base64 || reg.mpQrCodeBase64 || null;
           reg.mpTicketUrl = tx.ticket_url || reg.mpTicketUrl || null;
-          await reg.save();
+          await safeSave(reg);
         }
       } catch (e) {
         try {
@@ -570,21 +604,22 @@ async function webhook(req, res) {
         const cpfDigits = onlyDigits(String(cpfRaw));
         if (cpfDigits) {
           reg = await Registration.findOne({ where: { cpf: cpfDigits } });
-          if (reg) {
+          if (reg && !reg.mpPaymentId) {
             reg.mpPaymentId = mpId;
           }
         }
       }
       if (reg) {
-        const confirmedAt = new Date();
+        const confirmedAt = payment?.date_approved ? new Date(payment.date_approved) : new Date();
         const confirmedBy = 'Mercado Pago';
+        const wasPaid = reg.paymentStatus === 'paid';
         reg.paymentStatus = 'paid';
         if (!reg.paymentConfirmedAt) reg.paymentConfirmedAt = confirmedAt;
         if (!reg.paymentConfirmedBy) reg.paymentConfirmedBy = confirmedBy;
-        await reg.save();
+        await safeSave(reg);
         const assigned = await assignPaidOrderIfNeeded(reg.id, { paymentConfirmedAt: confirmedAt, paymentConfirmedBy: confirmedBy });
         if (!assigned) {
-          console.warn(`[Webhook] assignPaidOrderIfNeeded retornou null para inscrição id=${reg.id}. Os campos de confirmação foram salvos, mas a placa (se ATLETA) pode não ter sido atribuída.`);
+          console.warn(`[Webhook] assignPaidOrderIfNeeded retornou null para inscrição id=${reg.id} (já pago? ${wasPaid}). Os campos de confirmação foram salvos, mas a placa (se ATLETA) pode não ter sido atribuída.`);
         }
       }
     }
@@ -612,13 +647,13 @@ async function paymentStatus(req, res) {
       try {
         const payment = await getPaymentById(reg.mpPaymentId);
         if (String(payment?.status || '').toLowerCase() === 'approved') {
-          const confirmedAt = new Date();
+          const confirmedAt = payment?.date_approved ? new Date(payment.date_approved) : new Date();
           const confirmedBy = 'Mercado Pago';
           const wasPaid = reg.paymentStatus === 'paid';
           reg.paymentStatus = 'paid';
           if (!reg.paymentConfirmedAt) reg.paymentConfirmedAt = confirmedAt;
           if (!reg.paymentConfirmedBy) reg.paymentConfirmedBy = confirmedBy;
-          await reg.save();
+          await safeSave(reg);
           const assigned = await assignPaidOrderIfNeeded(reg.id, { paymentConfirmedAt: confirmedAt, paymentConfirmedBy: confirmedBy });
           if (!assigned && needsFix) {
             console.warn(`[Polling] assignPaidOrderIfNeeded retornou null para inscrição id=${reg.id} (status já era paid).`);
@@ -668,7 +703,7 @@ const uploadAvatar = [upload.single('avatar'), async (req, res) => {
       } catch (_) {}
       reg.avatarData = processed;
       reg.avatarPath = null;
-      await reg.save();
+      await safeSave(reg);
       req.session.flash = { type: 'success', message: 'Imagem atualizada com sucesso.' };
     } else {
       req.session.flash = { type: 'error', message: 'Selecione uma imagem válida.' };
@@ -1124,4 +1159,4 @@ async function diagnosePlatesAndPayments() {
   return diag;
 }
 
-module.exports = { formPage, submit, submitWithUpload, paymentPage, webhook, paymentStatus, avatarPage, uploadAvatar, cardPage, avatarData, cardData, cardDownload, cardDownloadCanvas, lookupByCpf, composeCard, assignPaidOrderIfNeeded, parseBirthDate, repairBrokenPaidRegistrations, diagnosePlatesAndPayments };
+module.exports = { formPage, submit, submitWithUpload, paymentPage, webhook, paymentStatus, avatarPage, uploadAvatar, cardPage, avatarData, cardData, cardDownload, cardDownloadCanvas, lookupByCpf, composeCard, assignPaidOrderIfNeeded, parseBirthDate, repairBrokenPaidRegistrations, diagnosePlatesAndPayments, safeSave };

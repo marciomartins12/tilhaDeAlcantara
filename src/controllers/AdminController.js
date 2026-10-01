@@ -2,7 +2,7 @@ const bcrypt = require('bcrypt');
 const { sequelize } = require('../models');
 const Registration = require('../models/Registration');
 const AdminUser = require('../models/AdminUser');
-const { composeCard, assignPaidOrderIfNeeded, parseBirthDate, repairBrokenPaidRegistrations, diagnosePlatesAndPayments } = require('./RegistrationController');
+const { composeCard, assignPaidOrderIfNeeded, parseBirthDate, repairBrokenPaidRegistrations, diagnosePlatesAndPayments, safeSave } = require('./RegistrationController');
 
 function isAdmin(req) {
   return !!req.session?.admin && req.session.admin.role === 'ADMIN';
@@ -170,13 +170,31 @@ module.exports = {
       reg.paymentStatus = 'paid';
       reg.paymentConfirmedBy = confirmedBy;
       reg.paymentConfirmedAt = confirmedAt;
-      await reg.save();
-      await assignPaidOrderIfNeeded(reg.id, { paymentConfirmedAt: confirmedAt, paymentConfirmedBy: confirmedBy });
-      req.session.flash = { type: 'success', message: 'Pagamento confirmado.' };
+      const saveOk = await safeSave(reg);
+      if (!saveOk) {
+        try {
+          await sequelize.query(
+            "UPDATE registrations SET paymentStatus='paid', paymentConfirmedBy=?, paymentConfirmedAt=?, updatedAt=NOW() WHERE id=?",
+            { replacements: [confirmedBy, confirmedAt, id] }
+          );
+        } catch (e3) {
+          console.error('Confirmar Pagamento (fallback SQL também falhou):', e3);
+        }
+      }
+      const assigned = await assignPaidOrderIfNeeded(reg.id, { paymentConfirmedAt: confirmedAt, paymentConfirmedBy: confirmedBy });
+      const isAthlete = reg.type === 'ATLETA';
+      const orderOk = !isAthlete || (assigned && Number(assigned.paidOrder) > 0);
+      if (!orderOk) {
+        req.session.flash = { type: 'error',
+          message: 'Pagamento confirmado, mas ' + (isAthlete ? 'a placa não foi atribuída automaticamente. Verifique o Diagnóstico e execute o Reparo de Pagamentos.' : '') };
+      } else {
+        req.session.flash = { type: 'success',
+          message: 'Pagamento confirmado' + (assigned && assigned.paidOrder ? ` (placa ${String(Math.min(Number(assigned.paidOrder), 999)).padStart(3, '0')})` : '') + '.' };
+      }
       return res.redirect('/admin/inscricoes');
     } catch (e) {
       console.error('Erro ao confirmar pagamento:', e);
-      req.session.flash = { type: 'error', message: 'Falha ao confirmar pagamento.' };
+      req.session.flash = { type: 'error', message: 'Falha ao confirmar pagamento: ' + (e.message || String(e)) };
       return res.redirect('/admin/inscricoes');
     }
   },
@@ -240,11 +258,9 @@ module.exports = {
     try {
       if (!isAdmin(req)) return res.redirect('/admin');
       const { id } = req.params;
-      const { sequelize } = require('../models');
-      const { Op } = require('sequelize');
       const medalCutoffRaw = process.env.MEDAL_CUTOFF;
       const medalCutoff = medalCutoffRaw ? Number(medalCutoffRaw) : undefined;
-      const tx = await sequelize.transaction();
+      const tx = await sequelize.transaction({ isolationLevel: require('sequelize').Transaction.ISOLATION_LEVELS.SERIALIZABLE });
 
       try {
         const reg = await Registration.findByPk(id, { transaction: tx });
@@ -257,25 +273,48 @@ module.exports = {
         const wasAthlete = reg.type === 'ATLETA';
         const vacatedOrder = wasPaid && wasAthlete && Number.isFinite(Number(reg.paidOrder)) ? Number(reg.paidOrder) : null;
 
-        // Remover a inscrição
         await reg.destroy({ transaction: tx });
 
-        // Compactar ordem das placas: todos os atletas pagos acima da placa vaga
-        // devem ser deslocados -1 (ex: cancelar 001 => 002 vira 001, 003 vira 002, ...)
         let shiftedCount = 0;
         if (vacatedOrder != null) {
-          const [affected] = await Registration.update(
-            { paidOrder: sequelize.literal('paidOrder - 1') },
-            { where: { paymentStatus: 'paid', type: 'ATLETA', paidOrder: { [Op.gt]: vacatedOrder } }, transaction: tx }
+          const [rows] = await sequelize.query(
+            "SELECT id, paidOrder FROM registrations WHERE paymentStatus = 'paid' AND type = 'ATLETA' AND paidOrder > ? ORDER BY paidOrder ASC",
+            { replacements: [vacatedOrder], transaction: tx }
           );
-          shiftedCount = affected || 0;
+          if (rows && rows.length > 0) {
+            const tmpOffset = -1000000;
+            for (const row of rows) {
+              await sequelize.query(
+                "UPDATE registrations SET paidOrder = ?, updatedAt = NOW() WHERE id = ?",
+                { replacements: [tmpOffset + Number(row.paidOrder), row.id], transaction: tx }
+              );
+            }
+            for (const row of rows) {
+              const newOrder = Number(row.paidOrder) - 1;
+              const [[occ]] = await sequelize.query(
+                "SELECT COUNT(*) AS c FROM registrations WHERE paidOrder = ?",
+                { replacements: [newOrder], transaction: tx }
+              );
+              if (Number(occ?.c || 0) > 0) {
+                const extra = ` (falhou ao mover id=${row.id} de paidOrder=${row.paidOrder} para ${newOrder} pois já está ocupada)`;
+                await tx.rollback();
+                req.session.flash = { type: 'error', message: 'Falha ao reorganizar numeração após cancelamento.' + extra };
+                return res.redirect('/admin/inscricoes');
+              }
+              await sequelize.query(
+                "UPDATE registrations SET paidOrder = ?, updatedAt = NOW() WHERE id = ?",
+                { replacements: [newOrder, row.id], transaction: tx }
+              );
+              shiftedCount++;
+            }
+          }
         }
 
         await tx.commit();
 
         const placaStr = vacatedOrder != null ? String(Math.min(vacatedOrder, 999)).padStart(3, '0') : null;
         if (vacatedOrder != null) {
-          req.session.flash = { type: 'success', message: `Inscrição cancelada. Reorganizada numeração a partir da placa ${placaStr} (${shiftedCount} reajustes).` };
+          req.session.flash = { type: 'success', message: `Inscrição cancelada. Reorganizada numeração a partir da placa ${placaStr} (${shiftedCount} reajustes via shift seguro).` };
         } else {
           req.session.flash = { type: 'success', message: 'Inscrição cancelada e removida.' };
         }
@@ -283,7 +322,12 @@ module.exports = {
       } catch (err) {
         await tx.rollback();
         console.error('Erro ao cancelar inscrição (tx):', err);
-        req.session.flash = { type: 'error', message: 'Falha ao cancelar inscrição.' };
+        let extra = '';
+        try {
+          if (err && err.parent) extra = ` (MySQL: ${err.parent.code || ''} ${err.parent.sqlMessage || ''})`;
+          else if (err && err.message) extra = ` (${err.message})`;
+        } catch (_) {}
+        req.session.flash = { type: 'error', message: 'Falha ao cancelar inscrição.' + extra };
         return res.redirect('/admin/inscricoes');
       }
     } catch (e) {
@@ -350,8 +394,20 @@ module.exports = {
       }
 
       console.log('[Admin] Edit inscrição id=', id, 'body=', JSON.stringify({ name, realName, cpf, city, group, phone, type, amount, birthDateRaw, savedBirthDate: reg.birthDate }));
-      await reg.save();
-      await reg.reload();
+      const ok = await safeSave(reg);
+      if (ok) {
+        try { await reg.reload(); } catch (_) {}
+      } else {
+        console.warn('[Admin Edit] safeSave falhou para id=', id, '. Tentando UPDATE SQL.');
+        try {
+          await sequelize.query(
+            "UPDATE registrations SET name=?, realName=?, cpf=?, city=?, `group`=?, phone=?, type=?, amount=?, birthDate=?, updatedAt=NOW() WHERE id=?",
+            { replacements: [reg.name, reg.realName, reg.cpf, reg.city, reg.group, reg.phone, reg.type, reg.amount, reg.birthDate, id] }
+          );
+        } catch (e2) {
+          console.error('[Admin Edit] fallback SQL falhou:', e2);
+        }
+      }
       console.log('[Admin] Edit inscrição id=', id, 'SALVO. Dados atuais:', JSON.stringify({ name: reg.name, realName: reg.realName, cpf: reg.cpf, city: reg.city, group: reg.group, phone: reg.phone, type: reg.type, amount: reg.amount, birthDate: reg.birthDate }));
       req.session.flash = { type: 'success', message: 'Inscrição atualizada.' };
       return res.redirect('/admin/inscricoes');
