@@ -799,26 +799,79 @@ module.exports = {
   registrationsFixGap: async (req, res) => {
     try {
       if (!isAdmin(req)) return res.redirect('/admin');
+      const Op = require('sequelize').Op;
       const fromRaw = req.body?.from ?? req.query?.from ?? 22;
       const from = Number(fromRaw);
       if (!Number.isFinite(from) || from < 1) {
         req.session.flash = { type: 'error', message: 'Parâmetro inválido.' };
         return res.redirect('/admin/inscricoes');
       }
-      const tx = await sequelize.transaction();
+      const gapPos = from + 1;
+
+      const [[chkGap]] = await sequelize.query(
+        "SELECT COUNT(*) AS c FROM registrations WHERE paidOrder = ?",
+        { replacements: [gapPos] }
+      );
+      const gapFree = Number(chkGap?.c || 0) === 0;
+
+      if (!gapFree) {
+        req.session.flash = { type: 'error',
+          message: `Não há gap na posição ${String(gapPos).padStart(3,'0')}. Essa placa já está ocupada. Use o reparo de pagamentos primeiro, ou informe a placa imediatamente ANTES do verdadeiro buraco.` };
+        return res.redirect('/admin/inscricoes');
+      }
+
+      const [rows] = await sequelize.query(
+        "SELECT id, paidOrder FROM registrations WHERE paymentStatus = 'paid' AND type = 'ATLETA' AND paidOrder > ? ORDER BY paidOrder ASC",
+        { replacements: [from] }
+      );
+      if (!rows || rows.length === 0) {
+        req.session.flash = { type: 'info',
+          message: `Nenhuma placa maior que ${String(from).padStart(3,'0')} para reajustar. Nada foi alterado.` };
+        return res.redirect('/admin/inscricoes');
+      }
+
+      const tx = await sequelize.transaction({ isolationLevel: require('sequelize').Transaction.ISOLATION_LEVELS.SERIALIZABLE });
       try {
-        const [affected] = await Registration.update(
-          { paidOrder: sequelize.literal('paidOrder - 1') },
-          { where: { paymentStatus: 'paid', type: 'ATLETA', paidOrder: { [require('sequelize').Op.gt]: from } }, transaction: tx }
-        );
+        const tmpOffset = -1000000;
+        for (const row of rows) {
+          await sequelize.query(
+            "UPDATE registrations SET paidOrder = ?, updatedAt = NOW() WHERE id = ?",
+            { replacements: [tmpOffset + Number(row.paidOrder), row.id], transaction: tx }
+          );
+        }
+        let shifted = 0;
+        for (const row of rows) {
+          const newOrder = Number(row.paidOrder) - 1;
+          const [[occ]] = await sequelize.query(
+            "SELECT COUNT(*) AS c FROM registrations WHERE paidOrder = ?",
+            { replacements: [newOrder], transaction: tx }
+          );
+          if (Number(occ?.c || 0) > 0) {
+            await tx.rollback();
+            req.session.flash = { type: 'error',
+              message: `Conflito ao tentar atribuir placa ${String(newOrder).padStart(3,'0')} (já ocupada durante shift). Abortado e desfeito.` };
+            return res.redirect('/admin/inscricoes');
+          }
+          await sequelize.query(
+            "UPDATE registrations SET paidOrder = ?, updatedAt = NOW() WHERE id = ?",
+            { replacements: [newOrder, row.id], transaction: tx }
+          );
+          shifted++;
+        }
         await tx.commit();
         const placaStr = String(Math.min(from, 999)).padStart(3, '0');
-        req.session.flash = { type: 'success', message: `Corrigido gap a partir da placa ${placaStr} (${affected || 0} reajustes).` };
+        req.session.flash = { type: 'success',
+          message: `Corrigido gap a partir da placa ${placaStr} (${shifted} placas reajustadas via shift seguro).` };
         return res.redirect('/admin/inscricoes');
       } catch (err) {
-        await tx.rollback();
+        try { await tx.rollback(); } catch (_) {}
         console.error('Erro ao corrigir gap de placas (tx):', err);
-        req.session.flash = { type: 'error', message: 'Falha ao corrigir gap.' };
+        let extra = '';
+        try {
+          if (err && err.parent) extra = ` (MySQL: ${err.parent.code || ''} ${err.parent.sqlMessage || ''})`;
+          else if (err && err.message) extra = ` (${err.message})`;
+        } catch (_) {}
+        req.session.flash = { type: 'error', message: 'Falha ao corrigir gap.' + extra };
         return res.redirect('/admin/inscricoes');
       }
     } catch (e) {
