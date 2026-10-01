@@ -104,6 +104,29 @@
     </table>
   </div>
 
+  <div class="admin-card" style="width:98%; margin:20px auto; border-left: 4px solid #ff6b6b;">
+    <div class="admin-card__title">
+      <span class="admin-card__icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </span>
+      <span>Reparar Pagamentos e Placas</span>
+    </div>
+    <p class="admin-card__desc">
+      <strong>Use esta ferramenta se:</strong> pagamentos marcados como "Pago" não mostram "por Mercado Pago" e/ou atletas não receberam número de placa (mostrando 000).<br>
+      Vará todos os registros <code>paymentStatus='paid'</code> e preenche automaticamente <code>paymentConfirmedBy/At</code> e atribui placas (paidOrder) aos atletas que estão sem.
+    </p>
+    <form method="POST" action="/admin/pagamentos/reparar" class="form" style="margin-top:10px;">
+      <button type="submit" class="btn btn--primary" onclick="return confirm('Essa ação irá:\n1. Atribuir \"Mercado Pago\" como confirmador de todos os pagamentos sem essa informação;\n2. Atribuir números de placa para todos os atletas pagos que estão sem;\n3. Usar data do Mercado Pago (quando disponível) ou data da atualização.\n\nTem certeza que deseja continuar?')" style="height: 38px; display:flex; align-items:center;">
+        Executar Reparo de Pagamentos
+      </button>
+    </form>
+    <div style="margin-top:12px; padding:10px; background:rgba(255,107,107,0.08); border-radius:8px; font-size:0.85rem; color:rgba(255,255,255,0.75);">
+      <strong>Quando usar:</strong> Após um pico de inscrições onde o webhook ou polling teve falhas transitórias (ex: deadlock de banco, timeout no MP). Execute primeiro e depois confira a lista — a mensagem de flash mostrará quantos foram reparados.
+    </div>
+  </div>
+
   <div class="admin-card" style="width:98%; margin:20px auto;">
     <div class="admin-card__title">
       <span class="admin-card__icon" aria-hidden="true">

@@ -19,8 +19,27 @@ async function assignPaidOrderIfNeeded(regOrId, overrides) {
 
       const locked = await Registration.findByPk(regId, { transaction: tx, lock: tx.LOCK.UPDATE });
       if (!locked) { await tx.rollback(); return null; }
-      if (locked.type !== 'ATLETA') { await tx.rollback(); return locked; }
-      if (locked.paidOrder && Number(locked.paidOrder) > 0) { await tx.rollback(); return locked; }
+
+      let needsSave = false;
+      if (!locked.paymentConfirmedAt) {
+        locked.paymentConfirmedAt = (overrides && overrides.paymentConfirmedAt) || new Date();
+        needsSave = true;
+      }
+      if (!locked.paymentConfirmedBy) {
+        locked.paymentConfirmedBy = (overrides && overrides.paymentConfirmedBy) || 'Mercado Pago';
+        needsSave = true;
+      }
+
+      if (locked.type !== 'ATLETA') {
+        if (needsSave) await locked.save({ transaction: tx });
+        await tx.commit();
+        return locked;
+      }
+      if (locked.paidOrder && Number(locked.paidOrder) > 0) {
+        if (needsSave) await locked.save({ transaction: tx });
+        await tx.commit();
+        return locked;
+      }
 
       const [[row]] = await sequelize.query(
         "SELECT COALESCE(MAX(paidOrder), 0) + 1 AS nextOrder FROM registrations WHERE type = 'ATLETA' FOR UPDATE",
@@ -28,15 +47,9 @@ async function assignPaidOrderIfNeeded(regOrId, overrides) {
       );
       const nextOrder = Number(row?.nextOrder || 1);
       locked.paidOrder = nextOrder;
+      needsSave = true;
 
-      if (!locked.paymentConfirmedAt) {
-        locked.paymentConfirmedAt = (overrides && overrides.paymentConfirmedAt) || new Date();
-      }
-      if (!locked.paymentConfirmedBy) {
-        locked.paymentConfirmedBy = (overrides && overrides.paymentConfirmedBy) || 'Mercado Pago';
-      }
-
-      await locked.save({ transaction: tx });
+      if (needsSave) await locked.save({ transaction: tx });
       await tx.commit();
       return locked;
     } catch (e) {
@@ -486,7 +499,6 @@ async function paymentPage(req, res) {
 
 async function webhook(req, res) {
   try {
-    // Suportar diferentes formatos do webhook: query.id, body.data.id, body.id, body.resource
     let id = req.query?.id || req.body?.data?.id || req.body?.id || null;
     if (!id && req.body?.resource) {
       const m = String(req.body.resource).match(/\/payments\/(\d+)/);
@@ -508,9 +520,16 @@ async function webhook(req, res) {
         }
       }
       if (reg) {
+        const confirmedAt = new Date();
+        const confirmedBy = 'Mercado Pago';
         reg.paymentStatus = 'paid';
+        if (!reg.paymentConfirmedAt) reg.paymentConfirmedAt = confirmedAt;
+        if (!reg.paymentConfirmedBy) reg.paymentConfirmedBy = confirmedBy;
         await reg.save();
-        await assignPaidOrderIfNeeded(reg);
+        const assigned = await assignPaidOrderIfNeeded(reg.id, { paymentConfirmedAt: confirmedAt, paymentConfirmedBy: confirmedBy });
+        if (!assigned) {
+          console.warn(`[Webhook] assignPaidOrderIfNeeded retornou null para inscrição id=${reg.id}. Os campos de confirmação foram salvos, mas a placa (se ATLETA) pode não ter sido atribuída.`);
+        }
       }
     }
     res.sendStatus(200);
@@ -527,17 +546,34 @@ async function paymentStatus(req, res) {
     const reg = await Registration.findByPk(id);
     if (!reg) return res.status(404).json({ error: 'Inscrição não encontrada' });
 
-    // Fallback: se ainda estiver pendente e houver mpPaymentId, consultar status no Mercado Pago
-    if (reg.paymentStatus !== 'paid' && reg.mpPaymentId) {
+    const isAthlete = reg.type === 'ATLETA';
+    const lacksOrder = isAthlete && (!reg.paidOrder || Number(reg.paidOrder) <= 0);
+    const lacksConfirmation = !reg.paymentConfirmedBy || !reg.paymentConfirmedAt;
+    const needsFix = reg.paymentStatus === 'paid' && (lacksOrder || lacksConfirmation);
+    const shouldCheckMp = (reg.paymentStatus !== 'paid' || needsFix) && reg.mpPaymentId;
+
+    if (shouldCheckMp) {
       try {
         const payment = await getPaymentById(reg.mpPaymentId);
-        if (payment?.status === 'approved') {
+        if (String(payment?.status || '').toLowerCase() === 'approved') {
+          const confirmedAt = new Date();
+          const confirmedBy = 'Mercado Pago';
+          const wasPaid = reg.paymentStatus === 'paid';
           reg.paymentStatus = 'paid';
+          if (!reg.paymentConfirmedAt) reg.paymentConfirmedAt = confirmedAt;
+          if (!reg.paymentConfirmedBy) reg.paymentConfirmedBy = confirmedBy;
           await reg.save();
-          await assignPaidOrderIfNeeded(reg);
+          const assigned = await assignPaidOrderIfNeeded(reg.id, { paymentConfirmedAt: confirmedAt, paymentConfirmedBy: confirmedBy });
+          if (!assigned && needsFix) {
+            console.warn(`[Polling] assignPaidOrderIfNeeded retornou null para inscrição id=${reg.id} (status já era paid).`);
+          }
         }
       } catch (e) {
-        // silencioso; manter pending 
+        if (reg.paymentStatus !== 'paid') {
+          // silencioso; manter pending
+        } else {
+          console.warn(`[Polling] Erro ao consultar MP para inscrição id=${reg.id} (tentativa de correção):`, e?.message || String(e));
+        }
       }
     }
 
@@ -809,4 +845,70 @@ async function lookupByCpf(req, res) {
   }
 }
 
-module.exports = { formPage, submit, submitWithUpload, paymentPage, webhook, paymentStatus, avatarPage, uploadAvatar, cardPage, avatarData, cardData, cardDownload, cardDownloadCanvas, lookupByCpf, composeCard, assignPaidOrderIfNeeded, parseBirthDate };
+async function repairBrokenPaidRegistrations() {
+  const { Op } = require('sequelize');
+  const broken = await Registration.findAll({
+    where: {
+      paymentStatus: 'paid',
+      [Op.or]: [
+        { paymentConfirmedBy: { [Op.is]: null } },
+        { paymentConfirmedAt: { [Op.is]: null } },
+        { [Op.and]: [{ type: 'ATLETA' }, { paidOrder: { [Op.is]: null } }] },
+        { [Op.and]: [{ type: 'ATLETA' }, { paidOrder: 0 }] },
+      ]
+    },
+    order: [['createdAt', 'ASC']]
+  });
+  const report = { total: broken.length, fixed: 0, stillBroken: 0, fixedOrder: 0, fixedConfirmation: 0, errors: [] };
+  for (const reg of broken) {
+    try {
+      const p = reg.get({ plain: true });
+      const hadOrder = p.type === 'ATLETA' && Number(p.paidOrder) > 0;
+      const hadConfirm = !!p.paymentConfirmedBy && !!p.paymentConfirmedAt;
+      const confirmedAt = p.paymentConfirmedAt || p.updatedAt || p.createdAt || new Date();
+      const confirmedBy = p.paymentConfirmedBy || (p.mpPaymentId ? 'Mercado Pago' : 'Correção Manual');
+      const overrides = { paymentConfirmedAt: confirmedAt, paymentConfirmedBy: confirmedBy };
+      if (p.mpPaymentId) {
+        try {
+          const mp = await getPaymentById(p.mpPaymentId);
+          if (mp && String(mp.status || '').toLowerCase() === 'approved' && mp.date_approved) {
+            overrides.paymentConfirmedAt = new Date(mp.date_approved);
+          }
+        } catch (_) {}
+      }
+      if (!hadConfirm) {
+        reg.paymentConfirmedAt = overrides.paymentConfirmedAt;
+        reg.paymentConfirmedBy = overrides.paymentConfirmedBy;
+        await reg.save();
+        report.fixedConfirmation++;
+      }
+      const result = await assignPaidOrderIfNeeded(reg.id, overrides);
+      if (!result) {
+        report.stillBroken++;
+        report.errors.push({ id: p.id, name: p.name, cpf: p.cpf, reason: 'assignPaidOrderIfNeeded retornou null' });
+      } else {
+        const r = result.get({ plain: true });
+        const orderOk = r.type !== 'ATLETA' || (Number(r.paidOrder) > 0);
+        const confirmOk = !!r.paymentConfirmedBy && !!r.paymentConfirmedAt;
+        if (orderOk && confirmOk) {
+          report.fixed++;
+          if (p.type === 'ATLETA' && !hadOrder && Number(r.paidOrder) > 0) report.fixedOrder++;
+        } else {
+          report.stillBroken++;
+          const missing = [];
+          if (!orderOk) missing.push('paidOrder');
+          if (!confirmOk) missing.push('paymentConfirmed');
+          report.errors.push({ id: p.id, name: p.name, cpf: p.cpf, reason: 'ainda faltando: ' + missing.join(',') });
+        }
+      }
+    } catch (e) {
+      report.stillBroken++;
+      try {
+        report.errors.push({ id: reg.id, name: reg.name, cpf: reg.cpf, reason: e?.message || String(e) });
+      } catch (_) { report.errors.push({ reason: 'erro inesperado' }); }
+    }
+  }
+  return report;
+}
+
+module.exports = { formPage, submit, submitWithUpload, paymentPage, webhook, paymentStatus, avatarPage, uploadAvatar, cardPage, avatarData, cardData, cardDownload, cardDownloadCanvas, lookupByCpf, composeCard, assignPaidOrderIfNeeded, parseBirthDate, repairBrokenPaidRegistrations };

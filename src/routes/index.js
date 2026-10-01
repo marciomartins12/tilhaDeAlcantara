@@ -37,6 +37,8 @@ router.get('/admin/inscricoes/:id/editar', AdminController.registrationsEditPage
 router.post('/admin/inscricoes/:id/editar', AdminController.registrationsEdit);
 router.post('/admin/placas/corrigir-gap', AdminController.registrationsFixGap);
 router.get('/admin/placas/corrigir-gap', AdminController.registrationsFixGap);
+router.post('/admin/pagamentos/reparar', AdminController.registrationsRepair);
+router.get('/admin/pagamentos/reparar', AdminController.registrationsRepair);
 
 // Admin: controle de recebimento dos Kits
 router.get('/admin/kits', AdminController.kitListPage);

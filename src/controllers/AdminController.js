@@ -2,7 +2,7 @@ const bcrypt = require('bcrypt');
 const { sequelize } = require('../models');
 const Registration = require('../models/Registration');
 const AdminUser = require('../models/AdminUser');
-const { composeCard, assignPaidOrderIfNeeded, parseBirthDate } = require('./RegistrationController');
+const { composeCard, assignPaidOrderIfNeeded, parseBirthDate, repairBrokenPaidRegistrations } = require('./RegistrationController');
 
 function isAdmin(req) {
   return !!req.session?.admin && req.session.admin.role === 'ADMIN';
@@ -824,6 +824,31 @@ module.exports = {
     } catch (e) {
       console.error('Erro ao corrigir gap de placas:', e);
       req.session.flash = { type: 'error', message: 'Falha ao corrigir gap.' };
+      return res.redirect('/admin/inscricoes');
+    }
+  },
+  registrationsRepair: async (req, res) => {
+    try {
+      if (!isAdmin(req)) return res.redirect('/admin');
+      const report = await repairBrokenPaidRegistrations();
+      const parts = [];
+      parts.push(`Total com problema: ${report.total}`);
+      parts.push(`Corrigidos com sucesso: ${report.fixed}`);
+      if (report.fixedConfirmation > 0) parts.push(`Confirmações (Mercado Pago) restauradas: ${report.fixedConfirmation}`);
+      if (report.fixedOrder > 0) parts.push(`Placas atribuídas: ${report.fixedOrder}`);
+      if (report.stillBroken > 0) parts.push(`Ainda com problema: ${report.stillBroken}`);
+      let detailMsg = parts.join(' | ');
+      if (report.errors && report.errors.length > 0) {
+        const topErrs = report.errors.slice(0, 5).map(e => `id=${e.id} ${e.name || ''} (${e.reason})`).join(' ; ');
+        detailMsg += ` — Erros: ${topErrs}`;
+        console.warn('[RepairPagamentos] relatório completo de erros:', JSON.stringify(report.errors, null, 2));
+      }
+      const type = report.stillBroken === 0 ? 'success' : 'error';
+      req.session.flash = { type, message: `Reparo de pagamentos concluído. ${detailMsg}` };
+      return res.redirect('/admin/inscricoes');
+    } catch (e) {
+      console.error('Erro no reparo de pagamentos:', e);
+      req.session.flash = { type: 'error', message: 'Falha ao executar reparo de pagamentos. ' + (e?.message || String(e)) };
       return res.redirect('/admin/inscricoes');
     }
   },
